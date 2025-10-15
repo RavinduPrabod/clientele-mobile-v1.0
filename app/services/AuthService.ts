@@ -1,5 +1,5 @@
 // services/authService.ts
-import axios from 'axios';
+import axios from '..//../lib/axios';
 import CryptoJS from 'crypto-js';
 
 interface UserForLoginDto {
@@ -102,7 +102,7 @@ class AuthService {
       const response = await axios.get(`/Auth/ValidateUser/admin`);
       
       console.log("url", axios.getUri())
-      console.log("token;", response);
+      console.log("token;", response.data);
       // Make API request
       // const response: AxiosResponse = await this.axiosInstance.post(
       //   'Auth/GetLoggedUser',

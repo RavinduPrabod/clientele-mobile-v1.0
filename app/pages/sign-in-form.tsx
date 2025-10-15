@@ -25,38 +25,38 @@ export default function SignInForm() {
     // Clear previous errors
     setError('');
 
-       console.log("xxxxxxxxxxx")
-        const getTokenForCompanyId = await LoginService.GetTokenForCompanyId(1060);
-              var  token = getTokenForCompanyId.data;
-              console.log('token', token)
-              
-    // Validate inputs
-    // if (!userId.trim() || !password.trim()) {
-    //   setError('Please enter both username and password');
-    //   return;
-    // }
+      //  console.log("xxxxxxxxxxx")
+      //   const getTokenForCompanyId = await LoginService.GetTokenForCompanyId(1060);
+      //         var  token = getTokenForCompanyId.data;
+      //         console.log('token', token)
 
-    // setLoading(true);
+    //Validate inputs
+    if (!userId.trim() || !password.trim()) {
+      setError('Please enter both username and password');
+      return;
+    }
 
-    // try {
-    //   const result = await authService.getLoggedUser(userId, password);
+    setLoading(true);
 
-    //   if (result.success) {
-    //     // Store user data and navigate
-    //     console.log('Login successful:', result.data);
-    //     // Store token/user data in secure storage here
-    //     router.push("/pages/switch-company-form");
-    //   } else {
-    //     setError(result.error || 'Login failed. Please try again.');
-    //     Alert.alert('Login Failed', result.error || 'Invalid credentials');
-    //   }
-    // } catch (err: any) {
-    //   const errorMessage = err.message || 'An unexpected error occurred';
-    //   setError(errorMessage);
-    //   Alert.alert('Error', errorMessage);
-    // } finally {
-    //   setLoading(false);
-    // }
+    try {
+      const result = await authService.getLoggedUser(userId, password);
+
+      if (result.success) {
+        // Store user data and navigate
+        console.log('Login successful:', result.data);
+        // Store token/user data in secure storage here
+        router.push("/pages/switch-company-form");
+      } else {
+        setError(result.error || 'Login failed. Please try again.');
+        Alert.alert('Login Failed', result.error || 'Invalid credentials');
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || 'An unexpected error occurred';
+      setError(errorMessage);
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function onSubmitSignUp() {
