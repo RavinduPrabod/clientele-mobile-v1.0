@@ -21,10 +21,14 @@
     },
     "android": {
       "edgeToEdgeEnabled": true,
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      }
+      "icon": "./assets/images/icon.png",
+      "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff",
+      "networkSecurityConfig": "android/network_security_config.xml"
+    },
+      "package": "com.anonymous.clientele"
     },
     "web": {
       "bundler": "metro",
