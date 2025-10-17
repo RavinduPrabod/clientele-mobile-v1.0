@@ -3,17 +3,7 @@ import * as React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-
-// Mock data - Replace with actual API call or props
-const mockDashboardData = {
-    companyName: 'ABC Corporation',
-    branchName: 'Branch Colombo',
-    currentDate: new Date(),
-    currentTime: new Date().getTime(),
-    todaySale: 20000.00,
-    todayPurchase: 15000.00,
-    userProfile: 'assets/images/user-avatar.png' // Optional
-};
+import { BranchData } from '@/app/Types/User.types';
 
 // Dashboard menu items - Dynamic configuration
 const dashboardMenuItems = [
@@ -34,7 +24,7 @@ const dashboardMenuItems = [
 
 export default function Dashboard() {
     const router = useRouter();
-    const [dashboardData, setDashboardData] = React.useState(mockDashboardData);
+    const [branches, setSelectedBranch] = React.useState<BranchData[]>([]);
     const [dateTime, setDateTime] = useState(new Date());
 
     useEffect(() => {

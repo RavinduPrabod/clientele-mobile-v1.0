@@ -1,11 +1,7 @@
-// services/authService.ts
-import axios from '..//../lib/axios';
-import CryptoJS from 'crypto-js';
-
-interface UserForLoginDto {
-  userId: string;
-  password: string;
-}
+// AuthService.ts
+import axios from '../../lib/axios';
+import { Auth } from '../services/APIService';
+import { UserStorage } from '../Utils/userStorage';
 
 interface LoginResponse {
   success: boolean;
@@ -14,59 +10,11 @@ interface LoginResponse {
   statusCode: number;
 }
 
-class AuthService {
-  
-  //private baseUri = this.getBaseUrl();
-  private encryptionKey = 'dmsswe'; // Store this securely in env
-  
-  private axiosInstance = axios.create({
-    //baseURL: this.baseUri,
-    timeout: 15000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+class AuthService { 
+  private baseUri: Auth;
 
-  /**
-   * Encrypts data using AES encryption (matching C# implementation)
-   */
-  private encryptData(data: string): string {
-    try {
-      const encrypted = CryptoJS.AES.encrypt(
-        data,
-        CryptoJS.enc.Utf8.parse(this.encryptionKey),
-        {
-          iv: CryptoJS.enc.Utf8.parse(''), // Use empty IV or generate one
-          mode: CryptoJS.mode.CBC,
-          padding: CryptoJS.pad.Pkcs7,
-        }
-      );
-      return encrypted.toString();
-    } catch (error) {
-      console.error('Encryption failed:', error);
-      throw new Error('Failed to encrypt credentials');
-    }
-  }
-
-  /**
-   * Decrypts response data from API
-   */
-  private decryptData(encryptedData: string): string {
-    try {
-      const decrypted = CryptoJS.AES.decrypt(
-        encryptedData,
-        CryptoJS.enc.Utf8.parse(this.encryptionKey),
-        {
-          iv: CryptoJS.enc.Utf8.parse(''),
-          mode: CryptoJS.mode.CBC,
-          padding: CryptoJS.pad.Pkcs7,
-        }
-      );
-      return decrypted.toString(CryptoJS.enc.Utf8);
-    } catch (error) {
-      console.error('Decryption failed:', error);
-      throw new Error('Failed to decrypt response');
-    }
+  constructor() {
+    this.baseUri = new Auth();
   }
 
   /**
@@ -82,47 +30,35 @@ class AuthService {
           statusCode: 400,
         };
       }
-
-      // Create user object
-      const user: UserForLoginDto = {
-        userId: userId.trim(),
-        password: password,
-      };
-
-      // Serialize to JSON
-      const jsonData = JSON.stringify(user);
-
-      // Encrypt the JSON
-      const encryptedString = this.encryptData(jsonData);
-
-      // Create payload with encrypted data
-      const encryptedPayload = JSON.stringify(encryptedString);
-
-      console.log("encryptedString", encryptedString);
-      const response = await axios.get(`/Auth/ValidateUser/admin`);
       
-      console.log("url", axios.getUri())
-      console.log("token;", response.data);
-      // Make API request
-      // const response: AxiosResponse = await this.axiosInstance.post(
-      //   'Auth/GetLoggedUser',
-      //   encryptedPayload
-      // );
+      const userCredentials = userId.trim() + "$" + password;
+
+      console.log("userCredentials", userCredentials);
+      console.log("API URL:", this.baseUri.GetLoggedUser);
+      
+      // Fixed: Send the string directly as the request body
+      const response = await axios.post(
+        this.baseUri.GetLoggedUser,
+        userCredentials,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+      console.log("Response status:", response.status);
 
       // Check response status
       if (response.status === 200) {
-        let responseData = response.data;
-
-        // If response is encrypted, decrypt it
-        if (typeof responseData === 'string') {
-          responseData = this.decryptData(responseData);
-        }
-
-        return {
-          success: true,
-          data: responseData,
-          statusCode: response.status,
-        };
+        
+        // Save branches to AsyncStorage
+      await UserStorage.saveUserBranches(response.data);
+      
+      return {
+        success: true,
+        data: response.data,
+        statusCode: response.status,
+      };
       }
 
       return {
@@ -179,7 +115,7 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       // Clear any stored tokens/session data
-      // Example: await AsyncStorage.removeItem('authToken');
+      // Example: await TokenStorage.clearTokens();
       console.log('User logged out');
     } catch (error) {
       console.error('Logout error:', error);

@@ -2,17 +2,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
-import authService from '../services/AuthService';
 import * as React from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, type TextInput, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import LoginService from '../services/LoginService';
+import AuthService from '../services/AuthService'; 
 
 export default function SignInForm() {
-  const [userId, setUserId] = React.useState('admin');
-  const [password, setPassword] = React.useState('dms@123');
+  const [userId, setUserId] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
 
   const passwordInputRef = React.useRef<TextInput>(null);
   const router = useRouter();
@@ -21,46 +19,42 @@ export default function SignInForm() {
     passwordInputRef.current?.focus();
   }
 
-  async function onSubmit() {
-    // Clear previous errors
-    setError('');
-
-      //  console.log("xxxxxxxxxxx")
-      //   const getTokenForCompanyId = await LoginService.GetTokenForCompanyId(1060);
-      //         var  token = getTokenForCompanyId.data;
-      //         console.log('token', token)
-
-    //Validate inputs
+  const handleLogin = async () => {
     if (!userId.trim() || !password.trim()) {
-      setError('Please enter both username and password');
+      Alert.alert('Error', 'Please enter both User ID and Password');
       return;
     }
 
-    setLoading(true);
-
     try {
-      const result = await authService.getLoggedUser(userId, password);
+      setLoading(true);
 
-      if (result.success) {
-        // Store user data and navigate
-        console.log('Login successful:', result.data);
-        // Store token/user data in secure storage here
-        router.push("/pages/switch-company-form");
+      // Call the login API
+      const response = await AuthService.getLoggedUser(userId, password);
+
+      if (response.success && response.data) {
+        // Data is automatically saved in AuthService.getLoggedUser
+        // Now we can navigate to Switch Company page
+        
+        console.log('Login successful! Branches saved.');
+        
+        // Navigate to Switch Company page
+        router.push('/pages/switch-company-form');
       } else {
-        setError(result.error || 'Login failed. Please try again.');
-        Alert.alert('Login Failed', result.error || 'Invalid credentials');
+        Alert.alert('Login Failed', response.error || 'Invalid credentials');
       }
-    } catch (err: any) {
-      const errorMessage = err.message || 'An unexpected error occurred';
-      setError(errorMessage);
-      Alert.alert('Error', errorMessage);
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  async function onSubmit() {
+    handleLogin();
   }
 
   async function onSubmitSignUp() {
- 
     router.push("/pages/sign-up-form");
   }
 
@@ -84,14 +78,7 @@ export default function SignInForm() {
               Login to Your Account
             </Text>
           </View>
-
-          {/* Error Message */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
+          
           {/* Form Section */}
           <View style={styles.formSection}>
             <View style={styles.inputGroup}>

@@ -1,48 +1,118 @@
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { 
+  Image, 
+  Pressable, 
+  ScrollView, 
+  StyleSheet, 
+  View, 
+  ActivityIndicator 
+} from 'react-native';
 import { useRouter } from 'expo-router';
-
-// Mock data - Replace with actual API call
-const mockUserData = {
-  companyName: 'ABC Corporation',
-  branches: [
-    { id: 1, name: 'Head Office', location: 'Colombo', isActive: true },
-    { id: 2, name: 'Negombo Branch', location: 'Negombo', isActive: true },
-    { id: 3, name: 'Kandy Branch', location: 'Kandy', isActive: true },
-    { id: 4, name: 'Galle Branch', location: 'Galle', isActive: true },
-    { id: 5, name: 'Jaffna Branch', location: 'Jaffna', isActive: false },
-  ]
-};
+import { UserStorage } from '../Utils/userStorage';
+import { UserBranch, BranchData } from '../Types/User.types';
 
 export default function SwitchCompany() {
   const router = useRouter();
   const [selectedBranch, setSelectedBranch] = React.useState<number | null>(null);
-  const [branches, setBranches] = React.useState(mockUserData.branches);
-  const [companyName, setCompanyName] = React.useState(mockUserData.companyName);
-  
+  const [branches, setBranches] = React.useState<BranchData[]>([]);
+  const [companyName, setCompanyName] = React.useState<string>('');
+  const [loading, setLoading] = React.useState<boolean>(true);
+  const [rawBranchData, setRawBranchData] = React.useState<UserBranch[]>([]);
 
-  // loading branches from API
+  // Transform API data to display format
+  const transformBranchData = (apiData: UserBranch[]): BranchData[] => {
+    return apiData.map((branch) => ({
+      id: branch.companyId,
+      name: branch.locationName,
+      location: branch.address.replace(/\n/g, ', '),
+      isActive: branch.userStatus === 1,
+      companyId: branch.companyId,
+      address: branch.address,
+    }));
+  };
+
+  // Load branches from AsyncStorage
   React.useEffect(() => {
-    // Replace this with actual API call
-    // fetchUserBranches().then(data => {
-    //   setBranches(data.branches);
-    //   setCompanyName(data.companyName);
-    // });
+    loadBranches();
   }, []);
+
+  const loadBranches = async () => {
+    try {
+      setLoading(true);
+      
+      // Get data from AsyncStorage
+      const storedBranches = await UserStorage.getUserBranches();
+      const storedCompanyName = await UserStorage.getCompanyName();
+
+      if (storedBranches.length > 0) {
+        setRawBranchData(storedBranches);
+        const transformedBranches = transformBranchData(storedBranches);
+        setBranches(transformedBranches);
+        setCompanyName(storedCompanyName);
+      } else {
+        // No data found - redirect to login
+        console.warn('No branch data found. Redirecting to login...');
+        // router.push('/login'); // Uncomment if you want auto-redirect
+      }
+    } catch (error) {
+      console.error('Error loading branches:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   function handleBranchSelect(branchId: number) {
     setSelectedBranch(branchId);
   }
 
-  function handleContinue() {
+  async function handleContinue() {
     if (selectedBranch) {
-      const branch = branches.find(b => b.id === selectedBranch);
-      console.log('Selected branch:', branch);
-      // Navigate to next screen or save selection
-      router.push("/pages/Dashboard/Dashbord"); // Adjust route as needed
+      try {
+        // Find the selected branch in raw data
+        const selectedBranchData = rawBranchData.find(
+          b => b.companyId === selectedBranch
+        );
+
+        if (selectedBranchData) {
+          // Save selected branch to AsyncStorage
+          await UserStorage.saveSelectedBranch(selectedBranchData);
+          
+          console.log('Selected branch saved:', selectedBranchData);
+          
+          // Navigate to dashboard
+          router.push("/pages/Dashboard/Dashbord");
+        }
+      } catch (error) {
+        console.error('Error saving selected branch:', error);
+      }
     }
+  }
+
+  // Show loading state
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#16a34a" />
+        <Text style={styles.loadingText}>Loading branches...</Text>
+      </View>
+    );
+  }
+
+  // Show empty state if no branches
+  if (branches.length === 0) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>No branches found</Text>
+        <Button 
+          className="mt-4 bg-green-600"
+          onPress={() => router.push('/pages/sign-in-form')}
+        >
+          <Text className="text-white">Back to Login</Text>
+        </Button>
+      </View>
+    );
   }
 
   return (
@@ -102,10 +172,13 @@ export default function SwitchCompany() {
                     ]}>
                       {branch.name}
                     </Text>
-                    <Text style={[
-                      styles.branchLocation,
-                      !branch.isActive && styles.branchLocationDisabled
-                    ]}>
+                    <Text 
+                      style={[
+                        styles.branchLocation,
+                        !branch.isActive && styles.branchLocationDisabled
+                      ]}
+                      numberOfLines={2}
+                    >
                       {branch.location}
                     </Text>
                   </View>
@@ -157,6 +230,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    padding: 24,
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#6b7280',
+    textAlign: 'center',
   },
   logoContainer: {
     alignItems: 'center',
