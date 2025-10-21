@@ -87,7 +87,11 @@ export default function SignInForm() {
                 id="email"
                 placeholder="Enter Your Username"
                 value={userId}
-                onChangeText={setUserId}
+                onChangeText={(text) => {
+                // Remove any $ symbols from input
+                const cleanedText = text.replace(/\$/g, '');
+                setUserId(cleanedText);
+                }}
                 autoComplete="username"
                 autoCapitalize="none"
                 onSubmitEditing={onEmailSubmitEditing}
@@ -104,7 +108,11 @@ export default function SignInForm() {
                 id="password"
                 placeholder="Enter Your Password"
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => {
+                // Remove any $ symbols from input
+                const cleanedText = text.replace(/\$/g, '');
+                setPassword(cleanedText);
+                }}
                 secureTextEntry
                 returnKeyType="send"
                 onSubmitEditing={onSubmit}

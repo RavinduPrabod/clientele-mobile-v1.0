@@ -12,10 +12,112 @@ export interface UserBranch {
 }
 
 export interface BranchData {
-  id: number;
   name: string;
   location: string;
   isActive: boolean;
   companyId: number;
   address: string;
+}
+
+export interface StockSummaryData {
+  companyId: number;
+
+  productId: string; // max length 18
+  uom: string;
+  productDescription: string;
+
+  categoryCode: string; // max length 5
+  categoryDescription: string;
+
+  storeCode: string; // max length 5
+  seqNo: number;
+
+  txnDate: string; // use string for Date to handle JSON serialization
+  txnYear: number;
+  txnMonth: number;
+
+  openingGrossQty: number;
+  openingQty: number;
+  openingValue: number;
+
+  purchaseGrossQty: number;
+  purchaseQty: number;
+  purchaseValue: number;
+
+  purchaseGrossRtnQty: number;
+  purchaseRtnQty: number;
+  purchaseRtnValue: number;
+
+  salesGrossQty: number;
+  salesQty: number;
+  salesValue: number;
+
+  closingGrossQty: number;
+  closingQty: number;
+  closingValue: number;
+
+  costPrice: number;
+
+  toDateOpeningQty: number;
+  toDateOpeningValue: number;
+  toDatePurchaseQty: number;
+  toDatePurchaseValue: number;
+
+  netPurchaseQty: number;
+  netPurchaseValue: number;
+  netSalesQty: number;
+  netSalesValue: number;
+
+  netStockQty: number;
+  netStockValue: number;
+  netStockTransferQty: number;
+  netStocktransferValue: number;
+
+  netBalanceQty: number;
+  netBalanceValue: number;
+
+  profitPerkg: number;
+  profitValue: number;
+
+  // ------------ Average Prices -------------- //
+  openingPrice: number;
+  closingPrice: number;
+  purchasePrice: number;
+  purchaseRtnPrice: number;
+  salesPrice: number;
+  netPurchasePrice: number;
+  netSalesPrice: number;
+  netStockPrice: number;
+  netStockTransferPrice: number;
+  netBalancePrice: number;
+
+  // ------------ Grand Totals --------------- //
+  gtOpeningQty: number;
+  gtOpeningValue: number;
+  gtPurchaseQty: number;
+  gtPurchaseValue: number;
+  gtNetPurchaseQty: number;
+  gtNetPurchaseValue: number;
+  gtPurchaseRtnQty: number;
+  gtPurchaseRtnValue: number;
+  gtSalesQty: number;
+  gtSalesValue: number;
+  gtClosingQty: number;
+  gtClosingValue: number;
+  gtStockQty: number;
+  gtStockValue: number;
+  gtStockTransferQty: number;
+  gtStockTransferValue: number;
+  gtBalanceQty: number;
+  gtBalanceValue: number;
+  gtProfitPerKg: number;
+  gtProfitValue: number;
+  fromToGtBalanceAmount: number;
+
+  // ---------- Stock Transfer ------------- //
+  docNo: number;
+  grossQty: number;
+  netQty: number;
+  netValue: number;
+  stockInOut: number;
 }

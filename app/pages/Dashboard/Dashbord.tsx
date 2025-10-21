@@ -3,7 +3,9 @@ import * as React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { BranchData } from '@/app/Types/User.types';
+import { StockSummaryData, UserBranch } from '@/app/Types/user.types';
+import { UserStorage } from '@/app/Utils/userStorage';
+import DashboardService from '@/app/services/DashboardService';
 
 // Dashboard menu items - Dynamic configuration
 const dashboardMenuItems = [
@@ -24,8 +26,9 @@ const dashboardMenuItems = [
 
 export default function Dashboard() {
     const router = useRouter();
-    const [branches, setSelectedBranch] = React.useState<BranchData[]>([]);
+    const [currentBranch, setSelectedBranch] = React.useState<UserBranch | null>(null);
     const [dateTime, setDateTime] = useState(new Date());
+    const [dashboardData, setDashboardData] = React.useState<StockSummaryData[]>([]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -48,11 +51,36 @@ export default function Dashboard() {
         return `${day}/${month}/${year}`;
     };
 
-    // Load dashboard data based on selected branch
-    React.useEffect(() => {
-        // Replace with actual API call using selected branch ID
-        // fetchDashboardData(selectedBranchId).then(data => setDashboardData(data));
-    }, []);
+      // Load branches from AsyncStorage
+      React.useEffect(() => {
+        loadSelectedBrancheData();
+      }, []);
+    
+      const loadSelectedBrancheData = async () => {
+        try {
+
+          // Get data from AsyncStorage
+          const storedBranches = await UserStorage.getSelectedBranch();
+            console.log("storedBranches",storedBranches)
+            
+          if (storedBranches?.companyId != null) {
+
+            setSelectedBranch(storedBranches);
+            const response = await DashboardService.getDashboardData(storedBranches.companyId, storedBranches.processDate);
+            console.log("getDashboardData", response.data)
+            setDashboardData(response.data);
+
+          } else {
+            // No data found - redirect to login
+            console.warn('No branch data found. Redirecting to login...');
+            // router.push('/login'); // Uncomment if you want auto-redirect
+          }
+          
+        } catch (error) {
+          console.error('Error loading branches:', error);
+        } finally {
+        }
+      };
 
     function handleMenuPress(path:string) {
         router.push(path as never);
@@ -80,7 +108,7 @@ export default function Dashboard() {
                     <View style={styles.infoRow}>
                         <View style={styles.infoItem}>
                             <Text style={styles.infoIcon}>🏢</Text>
-                            <Text style={styles.infoText}>{dashboardData.companyName}</Text>
+                            <Text style={styles.infoText}>{currentBranch?.companyName}</Text>
                         </View>
                         <View style={styles.infoItem}>
                             <Text style={styles.infoIcon}>📅</Text>
@@ -90,7 +118,7 @@ export default function Dashboard() {
                     <View style={styles.infoRow}>
                         <View style={styles.infoItem}>
                             <Text style={styles.infoIcon}>📍</Text>
-                            <Text style={styles.infoText}>{dashboardData.branchName}</Text>
+                            <Text style={styles.infoText}>{currentBranch?.locationName}</Text>
                         </View>
                         <View style={styles.infoItem}>
                             <Text style={styles.infoIcon}>🕐</Text>
@@ -104,13 +132,13 @@ export default function Dashboard() {
                     <View style={[styles.summaryCard, styles.salesCard]}>
                         <Text style={styles.summaryTitle}>TODAY'S{'\n'}SALE</Text>
                         <Text style={styles.summaryAmount}>
-                            RS. {dashboardData.todaySale.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            RS. {dashboardData[0].gtNetPurchaseValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} */
                         </Text>
                     </View>
                     <View style={[styles.summaryCard, styles.purchaseCard]}>
                         <Text style={styles.summaryTitle}>TODAY'S{'\n'}PURCHASES</Text>
                         <Text style={styles.summaryAmount}>
-                            RS. {dashboardData.todayPurchase.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {dashboardData[0].gtSalesValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} */
                         </Text>
                     </View>
                 </View>

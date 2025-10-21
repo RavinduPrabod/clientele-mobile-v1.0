@@ -11,24 +11,25 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { UserStorage } from '../Utils/userStorage';
-import { UserBranch, BranchData } from '../Types/User.types';
+import { UserBranch, BranchData } from '../Types/user.types';
+import AuthService from '../services/AuthService';
 
 export default function SwitchCompany() {
   const router = useRouter();
-  const [selectedBranch, setSelectedBranch] = React.useState<number | null>(null);
+  const [selectedBranch, setSelectedBranch] = React.useState<number>(0);
   const [branches, setBranches] = React.useState<BranchData[]>([]);
   const [companyName, setCompanyName] = React.useState<string>('');
   const [loading, setLoading] = React.useState<boolean>(true);
   const [rawBranchData, setRawBranchData] = React.useState<UserBranch[]>([]);
+  let UserCode : string
 
   // Transform API data to display format
   const transformBranchData = (apiData: UserBranch[]): BranchData[] => {
     return apiData.map((branch) => ({
-      id: branch.companyId,
+      companyId: branch.companyId,
       name: branch.locationName,
       location: branch.address.replace(/\n/g, ', '),
       isActive: branch.userStatus === 1,
-      companyId: branch.companyId,
       address: branch.address,
     }));
   };
@@ -78,11 +79,14 @@ export default function SwitchCompany() {
         if (selectedBranchData) {
           // Save selected branch to AsyncStorage
           await UserStorage.saveSelectedBranch(selectedBranchData);
-          
           console.log('Selected branch saved:', selectedBranchData);
-          
-          // Navigate to dashboard
-          router.push("/pages/Dashboard/Dashbord");
+
+          UserCode = selectedBranchData.userId + "-" +selectedBranchData.companyId;
+          const response = AuthService.getTokenString(UserCode);
+          if((await response).data != null){
+            // Navigate to dashboard
+            router.push("/pages/Dashboard/Dashbord");
+          }
         }
       } catch (error) {
         console.error('Error saving selected branch:', error);
@@ -140,24 +144,24 @@ export default function SwitchCompany() {
           <View style={styles.branchGrid}>
             {branches.map((branch) => (
               <Pressable
-                key={branch.id}
+                key={branch.companyId}
                 style={[
                   styles.branchTile,
-                  selectedBranch === branch.id && styles.branchTileSelected,
+                  selectedBranch === branch.companyId && styles.branchTileSelected,
                   !branch.isActive && styles.branchTileDisabled
                 ]}
-                onPress={() => branch.isActive && handleBranchSelect(branch.id)}
+                onPress={() => branch.isActive && handleBranchSelect(branch.companyId)}
                 disabled={!branch.isActive}
               >
                 <View style={styles.branchTileContent}>
                   {/* Branch Icon/Initial */}
                   <View style={[
                     styles.branchIcon,
-                    selectedBranch === branch.id && styles.branchIconSelected
+                    selectedBranch === branch.companyId && styles.branchIconSelected
                   ]}>
                     <Text style={[
                       styles.branchIconText,
-                      selectedBranch === branch.id && styles.branchIconTextSelected
+                      selectedBranch === branch.companyId && styles.branchIconTextSelected
                     ]}>
                       {branch.name.charAt(0)}
                     </Text>
@@ -167,7 +171,7 @@ export default function SwitchCompany() {
                   <View style={styles.branchDetails}>
                     <Text style={[
                       styles.branchName,
-                      selectedBranch === branch.id && styles.branchNameSelected,
+                      selectedBranch === branch.companyId && styles.branchNameSelected,
                       !branch.isActive && styles.branchNameDisabled
                     ]}>
                       {branch.name}
@@ -184,7 +188,7 @@ export default function SwitchCompany() {
                   </View>
 
                   {/* Selection Indicator */}
-                  {selectedBranch === branch.id && (
+                  {selectedBranch === branch.companyId && (
                     <View style={styles.checkmark}>
                       <Text style={styles.checkmarkText}>✓</Text>
                     </View>

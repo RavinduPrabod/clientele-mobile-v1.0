@@ -6,7 +6,7 @@ import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { router } from 'expo-router';
 import * as React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 export default function SignUpForm() {
   const passwordInputRef = React.useRef<TextInput>(null);
@@ -60,6 +60,13 @@ export default function SignUpForm() {
                 onSubmitEditing={onUsernameSubmitEditing}
                 returnKeyType="next"
                 submitBehavior="submit"
+                onChangeText={(text) => {
+                if (text.includes('$')) {
+                  Alert.alert('Invalid Character', 'The "$" symbol is not allowed in the username.');
+                  return; // Prevent update
+                }
+                //onSubmit(text);
+              }}
               />
             </View>
 
@@ -72,6 +79,13 @@ export default function SignUpForm() {
                 secureTextEntry
                 returnKeyType="next"
                 onSubmitEditing={onPasswordSubmitEditing}
+                onChangeText={(text) => {
+                if (text.includes('$')) {
+                  Alert.alert('Invalid Character', 'The "$" symbol is not allowed in the username.');
+                  return; // Prevent update
+                }
+                //onSubmit(text);
+              }}
               />
             </View>
 
@@ -84,6 +98,13 @@ export default function SignUpForm() {
                 secureTextEntry
                 returnKeyType="send"
                 onSubmitEditing={onSubmit}
+                onChangeText={(text) => {
+                if (text.includes('$')) {
+                  Alert.alert('Invalid Character', 'The "$" symbol is not allowed in the username.');
+                  return; // Prevent update
+                }
+                //onSubmit(text);
+              }}
               />
             </View>
 
@@ -104,16 +125,6 @@ export default function SignUpForm() {
               <Text style={styles.signInLink}>Sign In</Text>
             </Pressable>
           </View>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <Separator className="flex-1" />
-            <Text style={styles.dividerText}>Or Register with</Text>
-            <Separator className="flex-1" />
-          </View>
-
-          {/* Social Connections */}
-          <SocialConnections />
         </View>
       </View>
     </ScrollView>
