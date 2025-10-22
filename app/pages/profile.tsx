@@ -1,15 +1,18 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
+import AuthService from "../services/AuthService";
 
 export default function ProfileScreen() {
   const router = useRouter();
 
   function handleSwitchShop(){
+    AuthService.logout();
     router.push('/pages/switch-company-form')
   }
 
   function handleSignOut(){
+    AuthService.logout();
     router.push('/pages/sign-in-form')
   }
 

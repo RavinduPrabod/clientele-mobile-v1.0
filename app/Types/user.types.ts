@@ -121,3 +121,56 @@ export interface StockSummaryData {
   netValue: number;
   stockInOut: number;
 }
+
+export interface TransactionDetails {
+  CompanyId: number;
+  DocNo: number;
+  SerialNo: number;
+  TxnDate: string; // DateTime in C# → ISO string in TS
+  DocName?: string; // optional since string length constraints
+  TxnYear: number;
+  TxnMonth: number;
+  CustSupName?: string;
+  ContractNo?: string;
+  StoreCode?: string;
+  SeqNo: number;
+  ProductId?: string;
+  CategoryCode?: string;
+  GrossQty: number;
+  BaleQty: number;
+  WastageQty: number;
+  NetQty: number;
+  UnitPrice: number;
+  NetValue: number;
+  StockInOut: number;
+  ReturnSerialNo: number;
+  ReturnQty: number;
+  IsPrint: number;
+  CreatedBy?: string;
+  CreatedDateTime: string; // DateTime → string
+  CreatedWorkStation?: string;
+}
+
+export interface TransactionsSavingDto {
+  TransactionDetails: TransactionDetails[];
+  CompanyId: number;
+  CusSupName?: string;
+  ContactNo?: string;
+  TransactionType: number;
+  TxnDate: string; // DateTime → ISO string
+  IsPrint: number;
+  CreatedBy?: string;
+  CreatedWorkStation?: string;
+}
+
+export interface ComboDTO{
+  DataTextField : string;
+  DataValueField : string;
+}
+
+export interface LoginResponse {
+  success: boolean;
+  data?: any;
+  error?: string;
+  statusCode: number;
+}

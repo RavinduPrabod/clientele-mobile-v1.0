@@ -1,14 +1,10 @@
 // AuthService.ts
+import { TokenStorage } from '@/lib/tokenStorage';
 import axios from '../../lib/axios';
-import { Auth } from '../services/APIService';
-import { UserStorage } from '../Utils/userStorage';
+import { Auth } from '../../lib/ApiDoc';
+import { UserStorage } from '../../lib/userStorage';
+import { LoginResponse } from '../Types/user.types';
 
-interface LoginResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  statusCode: number;
-}
 
 class AuthService { 
   private baseUri: Auth;
@@ -32,9 +28,6 @@ class AuthService {
       }
       
       const userCredentials = userId.trim() + "$" + password;
-
-      console.log("userCredentials", userCredentials);
-      console.log("API URL:", this.baseUri.GetLoggedUser);
       
       // Fixed: Send the string directly as the request body
       const response = await axios.post(
@@ -46,14 +39,12 @@ class AuthService {
           }
         }
       );
-      console.log("Response status:", response.status);
-      console.log("Response status:", response.data);
 
       // Check response status
       if (response.status === 200) {
         
         // Save branches to AsyncStorage
-      await UserStorage.saveUserBranches(response.data);
+        await UserStorage.saveUserBranches(response.data);
       
       return {
         success: true,
@@ -115,7 +106,7 @@ class AuthService {
 
     async getTokenString(userCode:string): Promise<LoginResponse> {
     try {
-      console.log("userCode",userCode);
+
       // Fixed: Send the string directly as the request body
       const response = await axios.post(
         this.baseUri.getTokenString,
@@ -126,11 +117,10 @@ class AuthService {
           }
         }
       );
-      console.log("Response status:", response.status);
-      console.log("Response status:", response.data);
       // Check response status
       if (response.status === 200) {
-        await UserStorage.saveTokenString(response.data);   
+        await TokenStorage.setTokens(response.data.token);   
+        console.log("login token", await TokenStorage.getAccessToken())
       return {
         success: true,
         data: response.data,
@@ -180,11 +170,10 @@ class AuthService {
     }
   }
 
-  async logout(): Promise<void> {
+   async logout(): Promise<void> {
     try {
-      // Clear any stored tokens/session data
-      // Example: await TokenStorage.clearTokens();
-      console.log('User logged out');
+      await TokenStorage.clearTokens(await TokenStorage.getAccessToken())
+      console.log("logout token", await TokenStorage.getAccessToken())
     } catch (error) {
       console.error('Logout error:', error);
     }

@@ -1,14 +1,12 @@
 // DashboardService.ts
+import { AxiosError } from 'axios';
 import axios from '../../lib/axios';
-import { Dashboard } from '../services/APIService';
-import { UserStorage } from '../Utils/userStorage';
+import { Dashboard } from '../../lib/ApiDoc';
+import { UserStorage } from '../../lib/userStorage';
+import axiosInstance from '../../lib/axios';
+import { TokenStorage } from '@/lib/tokenStorage';
+import { LoginResponse } from '../Types/user.types';
 
-interface LoginResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  statusCode: number;
-}
 
 class DashboardService { 
   private baseUri: Dashboard;
@@ -16,90 +14,87 @@ class DashboardService {
   constructor() {
     this.baseUri = new Dashboard();
   }
-    async getDashboardData(
+
+   async getDashboardData(
     companyId: number,
-    processDate: string,
-    ): Promise<LoginResponse> {
+    processDate: string
+  ): Promise<LoginResponse> {
     try {
-        const token = await UserStorage.getTokenString();
-        console.log("token", token)
-        const response = await axios.get(
+      const token = await TokenStorage.getAccessToken();
+      if (!token) {
+        return {
+          success: false,
+          error: 'No authentication token found. Please log in again.',
+          statusCode: 401,
+        };
+      }
+
+      const response = await axios.get(
         `${this.baseUri.GetStockSummaryByProcessData}/${companyId}/${processDate}`,
-        {
-            headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`, // 👈 attach token here
-            },
-            timeout: 10000, // optional: add timeout for safety
-        }
-        );
-
-        console.log("Response status:", response.status);
-
-        if (response.status === 200) {
-        return {
-            success: true,
-            data: response.data,
-            statusCode: response.status,
-        };
-        }
-
-        return {
-        success: false,
-        error: 'Authentication failed',
+      );
+      if(response.data != null){
+        await UserStorage.saveStockSummary(response.data);
+      }
+      return {
+        success: true,
+        data: response.data,
         statusCode: response.status,
-        };
-    } catch (error: any) {
-        console.error('Error code:', error?.code);
-        console.error('Error response:', error?.response?.data);
+      };
+    } catch (error) {
+      const err = error as AxiosError;
 
-        if (error.response?.status === 400) {
-        return {
+      console.error('❌ Error code:', err.code);
+      console.error('❌ Error response:', err.response?.data);
+
+      // Handle HTTP response errors
+      if (err.response) {
+        const status = err.response.status;
+
+        if (status === 400) {
+          return {
             success: false,
-            error: error.response.data?.message || 'Bad request',
+            error: (err.response.data as any)?.message || 'Bad request',
             statusCode: 400,
-        };
+          };
         }
 
-        if (error.response?.status === 401) {
-        return {
+        if (status === 401) {
+          return {
             success: false,
             error: 'Unauthorized. Please log in again.',
             statusCode: 401,
-        };
-        }
-
-        if (error.code === 'ENOTFOUND') {
-        return {
-            success: false,
-            error: 'Server address not found. Check your network connection.',
-            statusCode: 503,
-        };
-        }
-
-        if (error.message?.includes('timeout')) {
-        return {
-            success: false,
-            error: 'Request timeout. Server is taking too long to respond.',
-            statusCode: 504,
-        };
+          };
         }
 
         return {
+          success: false,
+          error: (err.response.data as any)?.message || 'Server responded with an error.',
+          statusCode: status,
+        };
+      }
+
+      // Handle network-level or other unexpected errors
+      if (err.code === 'ENOTFOUND') {
+        return {
+          success: false,
+          error: 'Server not found. Please check your internet connection.',
+          statusCode: 503,
+        };
+      }
+
+      if (err.message?.includes('timeout')) {
+        return {
+          success: false,
+          error: 'Request timeout. The server took too long to respond.',
+          statusCode: 504,
+        };
+      }
+
+      return {
         success: false,
-        error: error.message || 'An unexpected error occurred',
-        statusCode: error.response?.status || 500,
-        };
-    }
-    }
-
-  async logout(): Promise<void> {
-    try {
-      // Clear any stored tokens/session data
-      // Example: await TokenStorage.clearTokens();
-      console.log('User logged out');
-    } catch (error) {
-      console.error('Logout error:', error);
+        error: err.message || 'Unexpected error occurred.',
+        statusCode: 500,
+      };
     }
   }
 }

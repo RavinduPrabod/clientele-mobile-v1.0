@@ -5,36 +5,26 @@ import { Text } from '@/components/ui/text';
 import * as React from 'react';
 import { Pressable, ScrollView, StyleSheet, View, FlatList, Image } from 'react-native';
 import { useRouter } from 'expo-router';
-
-// Mock data for dropdowns
-const mockProducts = [
-  { id: 1, name: 'Rice - Basmati', category: 'Grains' },
-  { id: 2, name: 'Wheat Flour', category: 'Flour' },
-  { id: 3, name: 'Sugar - White', category: 'Sweeteners' },
-  { id: 4, name: 'Dal - Yellow', category: 'Pulses' },
-];
-
-const mockCategories = [
-  { id: 1, name: 'Grains' },
-  { id: 2, name: 'Flour' },
-  { id: 3, name: 'Sweeteners' },
-  { id: 4, name: 'Pulses' },
-];
+import { TransactionDetails, TransactionsSavingDto, ComboDTO } from '@/app/Types/user.types';
+import TransactionService from '@/app/services/TransactionService';
 
 export default function PurchaseForm() {
   const router = useRouter();
-  
+
   // Form state
-  const [selectedProduct, setSelectedProduct] = React.useState('');
+  const [selectedProduct, setSelectedProduct] = React.useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = React.useState('');
   const [gross, setGross] = React.useState('');
   const [bale, setBale] = React.useState('');
   const [wastage, setWastage] = React.useState('');
   const [price, setPrice] = React.useState('');
-  
+
   // Dropdown visibility
   const [showProductDropdown, setShowProductDropdown] = React.useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = React.useState(false);
+
+  const [products, setProducts] = React.useState<any[]>([]);
+  const [categories, setCategories] = React.useState<any[]>([]);
 
   // Cart state
   const [cart, setCart] = React.useState<any[]>([]);
@@ -53,13 +43,47 @@ export default function PurchaseForm() {
     return netKg * priceVal;
   }, [netKg, price]);
 
-  function handleProductSelect(product: string) {
-    setSelectedProduct(product);
-    setShowProductDropdown(false);
-  }
+  // Load branches from AsyncStorage
+  React.useEffect(() => {
+    loadActiveProductList();
+  }, []);
 
-  function handleCategorySelect(category: string) {
-    setSelectedCategory(category);
+  const loadActiveProductList = async () => {
+    try {
+      const response = await TransactionService.getActiveProductList();
+      console.log('✅ Product API Response:', response);
+
+      if (response?.statusCode === 200 && Array.isArray(response.data)) {
+        setProducts(response.data);
+      } else {
+        console.warn('⚠️ No valid product list found');
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading product list:', error);
+    }
+  };
+
+  const handleProductSelect = async (productName : string, productCode: string) => {
+    try {
+      const response = await TransactionService.getProductCategoryByProductCode(productCode);
+      console.log('✅ Category API Response:', response);
+
+      if (response?.statusCode === 200 && Array.isArray(response.data)) {
+        setCategories(response.data);
+      } else {
+        console.warn('⚠️ No valid Category list found');
+        setCategories([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading Category list:', error);
+    }
+    setSelectedProduct(productName);
+    setShowProductDropdown(false);
+  };
+
+  function handleCategorySelect(categoryName: string, categoryCode: string) {
+    setSelectedCategory(categoryName);
     setShowCategoryDropdown(false);
   }
 
@@ -131,7 +155,7 @@ export default function PurchaseForm() {
 
         {/* Cart Icon with Badge */}
         <Pressable onPress={() => setShowCart(!showCart)} style={styles.cartButton}>
-          <Text style={styles.cartIcon}><Image source={require('assets/images/bag.png')}/></Text>
+          <Text style={styles.cartIcon}><Image source={require('assets/images/bag.png')} /></Text>
           {cart.length > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cart.length}</Text>
@@ -174,10 +198,12 @@ export default function PurchaseForm() {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Form Card */}
         <View style={styles.formCard}>
+
           {/* Product Dropdown */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Product</Text>
-            <Pressable 
+
+            <Pressable
               style={styles.dropdown}
               onPress={() => setShowProductDropdown(!showProductDropdown)}
             >
@@ -186,45 +212,55 @@ export default function PurchaseForm() {
               </Text>
               <Text style={styles.dropdownIcon}>▼</Text>
             </Pressable>
+
             {showProductDropdown && (
-              <View style={styles.dropdownMenu}>
-                {mockProducts.map((product) => (
-                  <Pressable
-                    key={product.id}
-                    style={styles.dropdownItem}
-                    onPress={() => handleProductSelect(product.name)}
-                  >
-                    <Text style={styles.dropdownItemText}>{product.name}</Text>
-                  </Pressable>
-                ))}
-              </View>
+              <ScrollView style={styles.dropdownMenu}>
+                {products.length > 0 ? (
+                  products.map((product) => (
+                    <Pressable
+                      key={product.dataTextField}
+                      style={styles.dropdownItem}
+                      onPress={() => handleProductSelect(product.dataTextField, product.dataValueField)}
+                    >
+                      <Text style={styles.dropdownItemText}>{product.dataTextField}</Text>
+                    </Pressable>
+                  ))
+                ) : (
+                  <Text style={styles.noDataText}>No products available</Text>
+                )}
+              </ScrollView>
             )}
           </View>
-
           {/* Category Dropdown */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Category</Text>
-            <Pressable 
+            <Text style={styles.label}>Categories</Text>
+
+            <Pressable
               style={styles.dropdown}
               onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
             >
-              <Text style={[styles.dropdownText, !selectedCategory && styles.placeholder]}>
-                {selectedCategory || 'Select Category'}
+              <Text style={[styles.dropdownText, !selectedProduct && styles.placeholder]}>
+                {selectedProduct || 'Select Category'}
               </Text>
               <Text style={styles.dropdownIcon}>▼</Text>
             </Pressable>
+
             {showCategoryDropdown && (
-              <View style={styles.dropdownMenu}>
-                {mockCategories.map((category) => (
-                  <Pressable
-                    key={category.id}
-                    style={styles.dropdownItem}
-                    onPress={() => handleCategorySelect(category.name)}
-                  >
-                    <Text style={styles.dropdownItemText}>{category.name}</Text>
-                  </Pressable>
-                ))}
-              </View>
+              <ScrollView style={styles.dropdownMenu}>
+                {categories.length > 0 ? (
+                  categories.map((category) => (
+                    <Pressable
+                      key={category.dataTextField}
+                      style={styles.dropdownItem}
+                      onPress={() => handleCategorySelect(category.dataTextField, category.dataValueField)}
+                    >
+                      <Text style={styles.dropdownItemText}>{category.dataTextField}</Text>
+                    </Pressable>
+                  ))
+                ) : (
+                  <Text style={styles.noDataText}>No categories available</Text>
+                )}
+              </ScrollView>
             )}
           </View>
 
@@ -439,6 +475,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
   },
+  noDataText: {
+    padding: 10,
+    textAlign: 'center',
+    color: '#888',
+  },
   inputWithUnit: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -508,7 +549,7 @@ const styles = StyleSheet.create({
   },
 
   /* ---------- ADDED CART STYLES (do not modify original styles above) ---------- */
-  cartButton: { position: 'relative', marginRight: 12, paddingLeft:150 },
+  cartButton: { position: 'relative', marginRight: 12, paddingLeft: 150 },
   cartIcon: { fontSize: 60 },
   cartBadge: {
     position: 'absolute',

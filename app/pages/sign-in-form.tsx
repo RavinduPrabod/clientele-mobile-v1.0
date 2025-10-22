@@ -6,10 +6,11 @@ import * as React from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, type TextInput, View, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import AuthService from '../services/AuthService'; 
+import { UserStorage } from '../../lib/userStorage';
 
 export default function SignInForm() {
-  const [userId, setUserId] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [userId, setUserId] = React.useState('admin');
+  const [password, setPassword] = React.useState('dms@123');
   const [loading, setLoading] = React.useState(false);
 
   const passwordInputRef = React.useRef<TextInput>(null);
@@ -32,13 +33,27 @@ export default function SignInForm() {
       const response = await AuthService.getLoggedUser(userId, password);
 
       if (response.success && response.data) {
-        // Data is automatically saved in AuthService.getLoggedUser
-        // Now we can navigate to Switch Company page
-        
-        console.log('Login successful! Branches saved.');
-        
+        const userBranches = await UserStorage.getUserBranches();
+
+      if (Array.isArray(userBranches) && userBranches.length > 1) {
+
         // Navigate to Switch Company page
         router.push('/pages/switch-company-form');
+
+      } else {
+
+        await UserStorage.saveSelectedBranch(userBranches[0]);
+        const UserCode = userBranches[0].userId + "$" + userBranches[0].companyId
+        const response = await AuthService.getTokenString(UserCode);
+
+        if (response?.data) {
+          // Navigate to Dashboard
+          router.push('/pages/Dashboard/Dashbord');
+        } else {
+          console.warn('No data in response:', response);
+        }
+      }
+        
       } else {
         Alert.alert('Login Failed', response.error || 'Invalid credentials');
       }

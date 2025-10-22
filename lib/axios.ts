@@ -74,19 +74,7 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = await TokenStorage.getRefreshToken();
-        
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        const response = await axios.post(`${axiosInstance.defaults.baseURL}/auth/refresh`, {
-          refreshToken: refreshToken
-        });
-
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-        
-        await TokenStorage.setTokens(accessToken, newRefreshToken);
+        const accessToken = await TokenStorage.getAccessToken();
         
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -99,7 +87,7 @@ axiosInstance.interceptors.response.use(
         processQueue(refreshError, null);
         
         console.error('Token refresh failed:', refreshError);
-        await TokenStorage.clearTokens();
+        //await TokenStorage.clearTokens(accessToken);
         
         return Promise.reject(refreshError);
       } finally {

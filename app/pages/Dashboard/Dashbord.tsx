@@ -4,12 +4,12 @@ import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StockSummaryData, UserBranch } from '@/app/Types/user.types';
-import { UserStorage } from '@/app/Utils/userStorage';
+import { UserStorage } from '@/lib/userStorage';
 import DashboardService from '@/app/services/DashboardService';
 
 // Dashboard menu items - Dynamic configuration
 const dashboardMenuItems = [
-    { id: 'purchase', label: 'PURCHASE', icon: '🛒',  route: '/pages/purchase', color: '#f59e0b' },
+    { id: 'purchase', label: 'PURCHASE', icon: '🛒', route: '/pages/purchase', color: '#f59e0b' },
     { id: 'sales', label: 'SALES', icon: '💵', route: '/pages/sales', color: '#f59e0b' },
     { id: 'purchase_return', label: 'PURCHASE\nRETURN', icon: '', route: '', color: '#f59e0b' },
     { id: 'print_receipt', label: 'PRINT\nRECEIPT', icon: '', route: '', color: '#f59e0b' },
@@ -51,38 +51,38 @@ export default function Dashboard() {
         return `${day}/${month}/${year}`;
     };
 
-      // Load branches from AsyncStorage
-      React.useEffect(() => {
+    // Load branches from AsyncStorage
+    React.useEffect(() => {
         loadSelectedBrancheData();
-      }, []);
-    
-      const loadSelectedBrancheData = async () => {
+    }, []);
+
+    const loadSelectedBrancheData = async () => {
         try {
 
-          // Get data from AsyncStorage
-          const storedBranches = await UserStorage.getSelectedBranch();
-            console.log("storedBranches",storedBranches)
-            
-          if (storedBranches?.companyId != null) {
+            // Get data from AsyncStorage
+            const selectedBranch = await UserStorage.getSelectedBranch();
 
-            setSelectedBranch(storedBranches);
-            const response = await DashboardService.getDashboardData(storedBranches.companyId, storedBranches.processDate);
-            console.log("getDashboardData", response.data)
-            setDashboardData(response.data);
+            if (selectedBranch?.companyId != null) {
 
-          } else {
-            // No data found - redirect to login
-            console.warn('No branch data found. Redirecting to login...');
-            // router.push('/login'); // Uncomment if you want auto-redirect
-          }
-          
+                setSelectedBranch(selectedBranch);
+                const response = await DashboardService.getDashboardData(selectedBranch.companyId, selectedBranch.processDate);
+                if (response.statusCode == 200) {
+                    setDashboardData(await UserStorage.getStockSummary());
+                }
+            } else {
+                // No data found - redirect to login
+                console.warn('No branch data found. Redirecting to login...');
+                // router.push('/login'); // Uncomment if you want auto-redirect
+            }
+
         } catch (error) {
-          console.error('Error loading branches:', error);
+            console.error('Error loading branches:', error);
         } finally {
         }
-      };
+    };
 
-    function handleMenuPress(path:string) {
+    function handleMenuPress(path: string) {
+        console.log("path",path)
         router.push(path as never);
     }
 
@@ -131,14 +131,16 @@ export default function Dashboard() {
                 <View style={styles.summaryCards}>
                     <View style={[styles.summaryCard, styles.salesCard]}>
                         <Text style={styles.summaryTitle}>TODAY'S{'\n'}SALE</Text>
-                        <Text style={styles.summaryAmount}>
-                            RS. {dashboardData[0].gtNetPurchaseValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} */
+                       <Text style={styles.summaryAmount}>
+                            LKR. {dashboardData?.[0]?.gtNetPurchaseValue?.toLocaleString('en-LK') ?? '0.00'}
                         </Text>
+
+
                     </View>
                     <View style={[styles.summaryCard, styles.purchaseCard]}>
                         <Text style={styles.summaryTitle}>TODAY'S{'\n'}PURCHASES</Text>
                         <Text style={styles.summaryAmount}>
-                            {dashboardData[0].gtSalesValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} */
+                            LKR. {dashboardData?.[0]?.gtSalesValue?.toLocaleString('en-LK') ?? '0.00'}
                         </Text>
                     </View>
                 </View>

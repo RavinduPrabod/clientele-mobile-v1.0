@@ -2,10 +2,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const TokenStorage = {
-  async setTokens(accessToken: string, refreshToken: string): Promise<void> {
+  async setTokens(accessToken: string): Promise<void> {
     try {
       await AsyncStorage.setItem('accessToken', accessToken);
-      await AsyncStorage.setItem('refreshToken', refreshToken);
     } catch (error) {
       console.error('Error storing tokens:', error);
     }
@@ -20,16 +19,7 @@ export const TokenStorage = {
     }
   },
 
-  async getRefreshToken(): Promise<string | null> {
-    try {
-      return await AsyncStorage.getItem('refreshToken');
-    } catch (error) {
-      console.error('Error getting refresh token:', error);
-      return null;
-    }
-  },
-
-  async clearTokens(): Promise<void> {
+  async clearTokens(p0: string | null): Promise<void> {
     try {
       await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
     } catch (error) {

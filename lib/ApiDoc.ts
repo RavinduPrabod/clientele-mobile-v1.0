@@ -7,3 +7,9 @@ export class Auth {
 export class Dashboard {
   GetStockSummaryByProcessData = '/PurchaseToSales/GetStockSummaryByProcessData';
 }
+
+export class Transactions{
+  GetActiveProductList = '/PurchaseToSales/GetActiveProductList';
+  GetProductCategoryByProductCode = '/PurchaseToSales/GetProductCategoryByProductCode';
+  InsertTransactionDetails = '/PurchaseToSales/InsertTransactionDetails';
+}

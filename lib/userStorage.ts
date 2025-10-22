@@ -1,33 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StockSummaryData, UserBranch } from '../Types/user.types'; 
+import { StockSummaryData, UserBranch } from '../app/Types/user.types'; 
 
 const STORAGE_KEYS = {
   USER_BRANCHES: '@user_branches',
   SELECTED_BRANCH: '@selected_branch',
   COMPANY_NAME: '@company_name',
-  TOKEN_STRING: '@tokenString'
+  TOKEN_STRING: '@token_string',
+  STOCK_SUMMARY:"@Stock_Summary"
 };
 
 export class UserStorage {
-
-   static async saveTokenString(token: string): Promise<void> {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN_STRING, token);
-    } catch (error) {
-      console.error('Error saving user branches:', error);
-      throw error;
-    }
-  }
-
-   static async getTokenString(): Promise<string> {
-    try {
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN_STRING);
-      return data ? JSON.parse(data) : '';
-    } catch (error) {
-      console.error('Error getting user branches:', error);
-      return '';
-    }
-  }
 
   // Save all user branches data
   static async saveUserBranches(branches: UserBranch[]): Promise<void> {
@@ -101,16 +83,28 @@ export class UserStorage {
     }
   }
 
-//dashboard
+  //Saved Stock Summary
   static async saveStockSummary(stockSummary: StockSummaryData[]): Promise<void> {
     try {
       // Save company name from first branch
       if (stockSummary.length > 0) {
-        await AsyncStorage.setItem(STORAGE_KEYS.USER_BRANCHES, JSON.stringify(stockSummary));
+        await AsyncStorage.setItem(STORAGE_KEYS.STOCK_SUMMARY, JSON.stringify(stockSummary));
       }
     } catch (error) {
-      console.error('Error saving user branches:', error);
+      console.error('Error saving stock summary:', error);
       throw error;
     }
   }
+
+    // Get Stock Summary
+  static async getStockSummary(): Promise<StockSummaryData[]> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.STOCK_SUMMARY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting stock summary:', error);
+      return [];
+    }
+  }
+  
 }

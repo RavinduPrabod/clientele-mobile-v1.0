@@ -10,7 +10,7 @@ import {
   ActivityIndicator 
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { UserStorage } from '../Utils/userStorage';
+import { UserStorage } from '../../lib/userStorage';
 import { UserBranch, BranchData } from '../Types/user.types';
 import AuthService from '../services/AuthService';
 
@@ -71,6 +71,7 @@ export default function SwitchCompany() {
   async function handleContinue() {
     if (selectedBranch) {
       try {
+        
         // Find the selected branch in raw data
         const selectedBranchData = rawBranchData.find(
           b => b.companyId === selectedBranch
@@ -79,10 +80,10 @@ export default function SwitchCompany() {
         if (selectedBranchData) {
           // Save selected branch to AsyncStorage
           await UserStorage.saveSelectedBranch(selectedBranchData);
-          console.log('Selected branch saved:', selectedBranchData);
 
-          UserCode = selectedBranchData.userId + "-" +selectedBranchData.companyId;
+          UserCode = selectedBranchData.userId + "$" +selectedBranchData.companyId;
           const response = AuthService.getTokenString(UserCode);
+
           if((await response).data != null){
             // Navigate to dashboard
             router.push("/pages/Dashboard/Dashbord");
