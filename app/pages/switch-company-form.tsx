@@ -1,18 +1,20 @@
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { 
-  Image, 
-  Pressable, 
-  ScrollView, 
-  StyleSheet, 
-  View, 
-  ActivityIndicator 
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  ActivityIndicator
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { UserStorage } from '../../lib/userStorage';
 import { UserBranch, BranchData } from '../Types/user.types';
 import AuthService from '../services/AuthService';
+import { getScreenOptions } from '@/components/shared/headerOption';
+import { useColorScheme } from 'nativewind';
 
 export default function SwitchCompany() {
   const router = useRouter();
@@ -21,7 +23,8 @@ export default function SwitchCompany() {
   const [companyName, setCompanyName] = React.useState<string>('');
   const [loading, setLoading] = React.useState<boolean>(true);
   const [rawBranchData, setRawBranchData] = React.useState<UserBranch[]>([]);
-  let UserCode : string
+  let UserCode: string
+  const { colorScheme } = useColorScheme();
 
   // Transform API data to display format
   const transformBranchData = (apiData: UserBranch[]): BranchData[] => {
@@ -42,7 +45,7 @@ export default function SwitchCompany() {
   const loadBranches = async () => {
     try {
       setLoading(true);
-      
+
       // Get data from AsyncStorage
       const storedBranches = await UserStorage.getUserBranches();
       const storedCompanyName = await UserStorage.getCompanyName();
@@ -71,7 +74,7 @@ export default function SwitchCompany() {
   async function handleContinue() {
     if (selectedBranch) {
       try {
-        
+
         // Find the selected branch in raw data
         const selectedBranchData = rawBranchData.find(
           b => b.companyId === selectedBranch
@@ -81,10 +84,10 @@ export default function SwitchCompany() {
           // Save selected branch to AsyncStorage
           await UserStorage.saveSelectedBranch(selectedBranchData);
 
-          UserCode = selectedBranchData.userId + "$" +selectedBranchData.companyId;
+          UserCode = selectedBranchData.userId + "$" + selectedBranchData.companyId;
           const response = AuthService.getTokenString(UserCode);
 
-          if((await response).data != null){
+          if ((await response).data != null) {
             // Navigate to dashboard
             router.push("/pages/Dashboard/Dashbord");
           }
@@ -98,9 +101,9 @@ export default function SwitchCompany() {
   // Show loading state
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#16a34a" />
-        <Text style={styles.loadingText}>Loading branches...</Text>
+      <View className="flex-1 justify-center items-center bg-background">
+        <ActivityIndicator size="large" className="text-primary" />
+        <Text className="text-muted-foreground mt-4 text-base">Loading branches...</Text>
       </View>
     );
   }
@@ -108,123 +111,129 @@ export default function SwitchCompany() {
   // Show empty state if no branches
   if (branches.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>No branches found</Text>
-        <Button 
-          className="mt-4 bg-green-600"
+      <View className="flex-1 justify-center items-center bg-background p-6">
+        <Text className="text-muted-foreground text-lg text-center">No branches found</Text>
+        <Button
+          className="mt-4 bg-primary"
           onPress={() => router.push('/pages/sign-in-form')}
         >
-          <Text className="text-white">Back to Login</Text>
+          <Text className="text-primary-foreground">Back to Login</Text>
         </Button>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.container}>
-        {/* Logo Section */}
-        <View style={styles.logoContainer}>
-          <Image 
-            source={require('assets/images/LogoWord.png')} 
-            style={styles.logo} 
-          />
-        </View>
+    <>
+      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} />
+      <View className="flex-1 bg-background" style={{ marginTop: 100 }}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.container}>
+            {/* Logo Section */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('assets/images/LogoWord.png')}
+                style={styles.logo}
+              />
+            </View>
 
-        {/* Content Section */}
-        <View style={styles.content}>
-          {/* Header Section */}
-          <View style={styles.header}>
-            <Text style={styles.companyText}>{companyName}</Text>
-            <Text style={styles.subtitle}>
-              Select Your Branch
-            </Text>
-          </View>
+            {/* Content Section */}
+            <View style={styles.content}>
 
-          {/* Branch Tiles Grid */}
-          <View style={styles.branchGrid}>
-            {branches.map((branch) => (
-              <Pressable
-                key={branch.companyId}
-                style={[
-                  styles.branchTile,
-                  selectedBranch === branch.companyId && styles.branchTileSelected,
-                  !branch.isActive && styles.branchTileDisabled
-                ]}
-                onPress={() => branch.isActive && handleBranchSelect(branch.companyId)}
-                disabled={!branch.isActive}
+              {/* Header Section */}
+              <View style={styles.header}>
+                <Text className="text-foreground text-3xl font-bold text-center mb-2">{companyName}</Text>
+                <Text className="text-muted-foreground text-base text-center">
+                  Select Your Branch
+                </Text>
+              </View>
+
+              {/* Branch Tiles Grid */}
+              <View style={styles.branchGrid}>
+                {branches.map((branch) => (
+                  <Pressable
+                    key={branch.companyId}
+                    className={`
+                      bg-card border-2 rounded-xl p-4 shadow-sm
+                      ${selectedBranch === branch.companyId ? 'border-primary bg-primary/5' : 'border-border'}
+                      ${!branch.isActive ? 'opacity-60' : ''}
+                    `}
+                    onPress={() => branch.isActive && handleBranchSelect(branch.companyId)}
+                    disabled={!branch.isActive}
+                  >
+                    <View style={styles.branchTileContent}>
+                      {/* Branch Icon/Initial */}
+                      <View className={`
+                        w-12 h-12 rounded-full items-center justify-center mr-4
+                        ${selectedBranch === branch.companyId ? 'bg-primary' : 'bg-muted'}
+                      `}>
+                        <Text className={`
+                          text-xl font-bold
+                          ${selectedBranch === branch.companyId ? 'text-primary-foreground' : 'text-muted-foreground'}
+                        `}>
+                          {branch.name.charAt(0)}
+                        </Text>
+                      </View>
+
+                      {/* Branch Details */}
+                      <View style={styles.branchDetails}>
+                        <Text className={`
+                          text-lg font-semibold mb-1
+                          ${selectedBranch === branch.companyId ? 'text-primary' : 'text-foreground'}
+                          ${!branch.isActive ? 'text-muted-foreground' : ''}
+                        `}>
+                          {branch.name}
+                        </Text>
+                        <Text
+                          className={`
+                            text-sm
+                            ${selectedBranch === branch.companyId ? 'text-primary' : 'text-muted-foreground'}
+                            ${!branch.isActive ? 'text-muted-foreground/50' : ''}
+                          `}
+                          numberOfLines={2}
+                        >
+                          {branch.location}
+                        </Text>
+                      </View>
+
+                      {/* Selection Indicator */}
+                      {selectedBranch === branch.companyId && (
+                        <View className="w-7 h-7 rounded-full bg-primary items-center justify-center ml-2">
+                          <Text className="text-primary-foreground text-base font-bold">✓</Text>
+                        </View>
+                      )}
+
+                      {/* Inactive Badge */}
+                      {!branch.isActive && (
+                        <View className="absolute -top-2 -right-2 bg-destructive px-2 py-1 rounded-xl">
+                          <Text className="text-destructive-foreground text-xs font-semibold">Inactive</Text>
+                        </View>
+                      )}
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* Continue Button */}
+              <Button
+                className={`w-full bg-primary mb-4 ${!selectedBranch ? 'opacity-50' : ''}`}
+                onPress={handleContinue}
+                disabled={!selectedBranch}
               >
-                <View style={styles.branchTileContent}>
-                  {/* Branch Icon/Initial */}
-                  <View style={[
-                    styles.branchIcon,
-                    selectedBranch === branch.companyId && styles.branchIconSelected
-                  ]}>
-                    <Text style={[
-                      styles.branchIconText,
-                      selectedBranch === branch.companyId && styles.branchIconTextSelected
-                    ]}>
-                      {branch.name.charAt(0)}
-                    </Text>
-                  </View>
+                <Text className="text-primary-foreground font-medium">
+                  Continue
+                </Text>
+              </Button>
 
-                  {/* Branch Details */}
-                  <View style={styles.branchDetails}>
-                    <Text style={[
-                      styles.branchName,
-                      selectedBranch === branch.companyId && styles.branchNameSelected,
-                      !branch.isActive && styles.branchNameDisabled
-                    ]}>
-                      {branch.name}
-                    </Text>
-                    <Text 
-                      style={[
-                        styles.branchLocation,
-                        !branch.isActive && styles.branchLocationDisabled
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {branch.location}
-                    </Text>
-                  </View>
-
-                  {/* Selection Indicator */}
-                  {selectedBranch === branch.companyId && (
-                    <View style={styles.checkmark}>
-                      <Text style={styles.checkmarkText}>✓</Text>
-                    </View>
-                  )}
-
-                  {/* Inactive Badge */}
-                  {!branch.isActive && (
-                    <View style={styles.inactiveBadge}>
-                      <Text style={styles.inactiveBadgeText}>Inactive</Text>
-                    </View>
-                  )}
-                </View>
-              </Pressable>
-            ))}
+              {/* Additional Info */}
+              <Text className="text-muted-foreground text-sm text-center">
+                {branches.filter(b => b.isActive).length} active branch(es) available
+              </Text>
+            </View>
           </View>
-
-          {/* Continue Button */}
-          <Button 
-            className="w-full bg-green-600 hover:bg-green-700" 
-            onPress={handleContinue}
-            disabled={!selectedBranch}
-            style={[styles.continueButton, !selectedBranch && styles.continueButtonDisabled]}
-          >
-            <Text className="text-white font-medium">
-              Continue
-            </Text>
-          </Button>
-
-          {/* Additional Info */}
-          <Text style={styles.infoText}>
-            {branches.filter(b => b.isActive).length} active branch(es) available
-          </Text>
-        </View>
+        </ScrollView>
       </View>
-    </ScrollView>
+    </>
   );
 }
 
@@ -233,37 +242,12 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6b7280',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
-    padding: 24,
-  },
-  emptyText: {
-    fontSize: 18,
-    color: '#6b7280',
-    textAlign: 'center',
+    flex: 1
   },
   logoContainer: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 30,
-    backgroundColor: '#f8f9fa',
+    paddingTop: 30,
+    paddingBottom: 30
   },
   logo: {
     width: 280,
@@ -280,126 +264,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 32,
   },
-  companyText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fcba03',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6b7280',
-    textAlign: 'center',
-  },
   branchGrid: {
     gap: 16,
     marginBottom: 32,
-  },
-  branchTile: {
-    backgroundColor: '#ffffff',
-    borderWidth: 2,
-    borderColor: '#e5e7eb',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  branchTileSelected: {
-    borderColor: '#16a34a',
-    backgroundColor: '#f0fdf4',
-  },
-  branchTileDisabled: {
-    backgroundColor: '#f9fafb',
-    opacity: 0.6,
   },
   branchTileContent: {
     flexDirection: 'row',
     alignItems: 'center',
     position: 'relative',
   },
-  branchIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  branchIconSelected: {
-    backgroundColor: '#16a34a',
-  },
-  branchIconText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6b7280',
-  },
-  branchIconTextSelected: {
-    color: '#ffffff',
-  },
   branchDetails: {
     flex: 1,
-  },
-  branchName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  branchNameSelected: {
-    color: '#16a34a',
-  },
-  branchNameDisabled: {
-    color: '#9ca3af',
-  },
-  branchLocation: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  branchLocationDisabled: {
-    color: '#d1d5db',
-  },
-  checkmark: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#16a34a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  checkmarkText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  inactiveBadge: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#ef4444',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  inactiveBadgeText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  continueButton: {
-    marginBottom: 16,
-  },
-  continueButtonDisabled: {
-    opacity: 0.5,
-  },
-  infoText: {
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#6b7280',
   },
 });

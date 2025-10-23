@@ -3,32 +3,39 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { Pressable, ScrollView, StyleSheet, View, FlatList, Image } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View, FlatList, Image, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { TransactionDetails, TransactionsSavingDto, ComboDTO } from '@/app/Types/user.types';
 import TransactionService from '@/app/services/TransactionService';
+import { ToastAndroid } from 'react-native';
+import { NativeSelectScrollView, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TriggerRef } from '@rn-primitives/select';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColorScheme } from 'nativewind';
+import { getScreenOptions } from '@/components/shared/headerOption';
 
 export default function PurchaseForm() {
   const router = useRouter();
-
   // Form state
   const [selectedProduct, setSelectedProduct] = React.useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = React.useState('');
+  const [selectedProductCode, setSelectedProductCode] = React.useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = React.useState<string | null>(null);
+  const [selectedCategoryCode, setSelectedCategoryCode] = React.useState<string | null>(null);
   const [gross, setGross] = React.useState('');
   const [bale, setBale] = React.useState('');
   const [wastage, setWastage] = React.useState('');
   const [price, setPrice] = React.useState('');
 
-  // Dropdown visibility
-  const [showProductDropdown, setShowProductDropdown] = React.useState(false);
-  const [showCategoryDropdown, setShowCategoryDropdown] = React.useState(false);
-
+  // dataset bind
   const [products, setProducts] = React.useState<any[]>([]);
   const [categories, setCategories] = React.useState<any[]>([]);
 
   // Cart state
   const [cart, setCart] = React.useState<any[]>([]);
   const [showCart, setShowCart] = React.useState(false);
+  const [selectedCartItem, setSelectedCartItem] = React.useState<any | null>(null);
+
+  const [isCategoryLoading, setIsCategoryLoading] = React.useState(false);
 
   // Calculated values
   const netKg = React.useMemo(() => {
@@ -43,10 +50,31 @@ export default function PurchaseForm() {
     return netKg * priceVal;
   }, [netKg, price]);
 
-  // Load branches from AsyncStorage
+  const scrollRef = React.useRef<ScrollView>(null);
+  const productTriggerRef = React.useRef<TriggerRef>(null);
+  const categoryTriggerRef = React.useRef<TriggerRef>(null);
+  const insets = useSafeAreaInsets();
+
+  const { colorScheme } = useColorScheme();
+
+  // Simplified content insets
+  const contentInsets = {
+    top: 20,
+    bottom: 20,
+    left: 12,
+    right: 12,
+  };
+
+  // Load products on mount
   React.useEffect(() => {
     loadActiveProductList();
   }, []);
+
+  React.useEffect(() => {
+    if (cart.length === 0 && showCart) {
+      setShowCart(false);
+    }
+  }, [cart]);
 
   const loadActiveProductList = async () => {
     try {
@@ -64,28 +92,49 @@ export default function PurchaseForm() {
     }
   };
 
-  const handleProductSelect = async (productName : string, productCode: string) => {
+  const handleProductSelect = async (productCode: string) => {
     try {
+      const product = products.find(p => p.dataValueField === productCode);
+      if (!product) return;
+
+      setSelectedProductCode(productCode);
+      setSelectedProduct(product.dataTextField);
+
+      // Disable category dropdown while loading
+      setIsCategoryLoading(true);
+      setSelectedCategory(null);
+      setSelectedCategoryCode(null);
+
       const response = await TransactionService.getProductCategoryByProductCode(productCode);
       console.log('✅ Category API Response:', response);
 
       if (response?.statusCode === 200 && Array.isArray(response.data)) {
         setCategories(response.data);
+        setIsCategoryLoading(false);
+
+        // Auto-open category dropdown on mobile
+        setTimeout(() => {
+          categoryTriggerRef.current?.open();
+        }, 300);
       } else {
         console.warn('⚠️ No valid Category list found');
         setCategories([]);
+        setIsCategoryLoading(false);
       }
+
     } catch (error) {
       console.error('❌ Error loading Category list:', error);
+      setIsCategoryLoading(false);
     }
-    setSelectedProduct(productName);
-    setShowProductDropdown(false);
   };
 
-  function handleCategorySelect(categoryName: string, categoryCode: string) {
-    setSelectedCategory(categoryName);
-    setShowCategoryDropdown(false);
-  }
+  const handleCategorySelect = (categoryCode: string) => {
+    const category = categories.find(c => c.dataValueField === categoryCode);
+    if (category) {
+      setSelectedCategoryCode(categoryCode);
+      setSelectedCategory(category.dataTextField);
+    }
+  };
 
   function handleAddProduct() {
     // Validate form
@@ -109,20 +158,29 @@ export default function PurchaseForm() {
 
     setCart(prev => [...prev, productData]);
 
+    ToastAndroid.show('Product added to cart!', ToastAndroid.SHORT);
+
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ y: 0, animated: true });
+    }
+
     // Reset form
-    setSelectedProduct('');
-    setSelectedCategory('');
+    setSelectedProduct(null);
+    setSelectedProductCode(null);
+    setSelectedCategory(null);
+    setSelectedCategoryCode(null);
     setGross('');
     setBale('');
     setWastage('');
     setPrice('');
   }
 
-  function handleRemoveProduct(id: number) {
-    setCart((prev) => prev.filter((item) => item.id !== id));
-  }
+  const handleRemoveProduct = (id: number) => {
+    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+  };
 
   function handlePlaceOrder() {
+    console.log('Placing order:', cart);
     if (cart.length === 0) {
       alert('Your cart is empty!');
       return;
@@ -133,272 +191,327 @@ export default function PurchaseForm() {
     setShowCart(false);
   }
 
-  function handleBack() {
-    router.back();
-  }
-
-  function handleProfile() {
-    router.push('/pages/profile');
-  }
-
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={handleBack} style={styles.backButton}>
-          <Text style={styles.backIcon}>←</Text>
-        </Pressable>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerIcon}></Text>
-          <Text style={styles.headerTitle}>Purchase</Text>
-        </View>
+    <>
+      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} />
+      <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
+        <View style={styles.container}>
+          {/* Header */}
+          <View className="flex-row justify-between items-center px-4 pt-12 pb-4 bg-card border-b border-border">
+            <Text className="text-foreground text-2xl font-bold">Purchase</Text>
+            {/* Cart Icon with Badge */}
+            <Pressable onPress={() => {
+              if (cart.length === 0) {
+                alert('Your cart is empty. Please add at least one product.');
+                return;
+              }
+              setShowCart(!showCart);
+            }}
+              style={styles.cartButton}>
+              <Text style={styles.cartIcon}><Image source={require('assets/images/add-to-cart.png')} /></Text>
+              {cart.length > 0 && (
+                <View className="absolute top-2 -right-2 bg-destructive rounded-full px-1.5 py-0.5">
+                  <Text className="text-destructive-foreground text-xs font-bold">{cart.length}</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
 
-        {/* Cart Icon with Badge */}
-        <Pressable onPress={() => setShowCart(!showCart)} style={styles.cartButton}>
-          <Text style={styles.cartIcon}><Image source={require('assets/images/bag.png')} /></Text>
-          {cart.length > 0 && (
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{cart.length}</Text>
+          {/* Cart Dropdown */}
+          {showCart && (
+            <View className="bg-card p-3 border-b border-border">
+              <Text className="text-foreground text-lg font-bold mb-3 text-center">🛒 Cart Summary</Text>
+              <FlatList
+                data={cart}
+                keyExtractor={(item) => item.id.toString()}
+                renderItem={({ item }) => (
+                  <Pressable
+                    className="bg-muted rounded-xl p-3 mb-2.5 border border-border"
+                    onPress={() => setSelectedCartItem(item)}
+                  >
+                    <View style={styles.cartItemHeader}>
+                      <Text className="text-foreground font-bold text-base">{item.product}</Text>
+                      <Text className="text-sm">{item.category}</Text>
+                    </View>
+                    <View style={styles.cartItemRow}>
+                      <Text className="text-xs">Net: {item.netKg.toFixed(2)} Kg</Text>
+                      <Text className="text-xs">Rs.{item.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                      {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </View>
+                    <Pressable 
+                      onPress={() => handleRemoveProduct(item.id)} 
+                      className="self-end bg-destructive/10 rounded-md py-1 px-2 mt-1.5"
+                    >
+                      <Text className="text-destructive font-semibold text-xs">Remove</Text>
+                    </Pressable>
+                  </Pressable>
+                )}
+              />
+
+              <Pressable 
+                className="bg-primary rounded-lg p-2.5 items-center mt-2"
+                onPress={handlePlaceOrder}
+              >
+                <Text className="text-primary-foreground font-bold">Place Order</Text>
+              </Pressable>
             </View>
           )}
-        </Pressable>
 
-        <Pressable onPress={handleProfile} style={styles.profileButton}>
-          <View style={styles.profileIcon}>
-            <Text style={styles.profileIconText}>👤</Text>
-          </View>
-        </Pressable>
-      </View>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            ref={scrollRef}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Form Card */}
+            <View className="bg-card rounded-2xl p-5 mb-4 border border-border shadow-sm">
 
-      {/* Cart Dropdown */}
-      {showCart && (
-        <View style={styles.cartDropdown}>
-          <FlatList
-            data={cart}
-            keyExtractor={(item) => item.id.toString()}
-            renderItem={({ item }) => (
-              <View style={styles.cartItem}>
-                <Pressable onPress={() => alert(`Product: ${item.product}\nCategory: ${item.category}\nNetKg: ${item.netKg.toFixed(2)}\nValue: Rs.${item.totalValue.toFixed(2)}`)}>
-                  <Text style={styles.cartItemText}>
-                    {item.product} ({item.netKg.toFixed(2)}Kg) - Rs.{item.totalValue.toFixed(2)}
+              {/* Product Select */}
+              <View style={styles.inputGroup}>
+                <Text className="text-sm mb-2 font-medium">Products</Text>
+                <Select
+                  value={selectedProductCode ? { value: selectedProductCode, label: selectedProduct || '' } : undefined}
+                  onValueChange={(option) => {
+                    if (option?.value) {
+                      handleProductSelect(option.value);
+                    }
+                  }}
+                >
+                  <SelectTrigger ref={productTriggerRef}>
+                    <SelectValue placeholder="Select Product" />
+                  </SelectTrigger>
+                  <SelectContent insets={contentInsets}>
+                    <NativeSelectScrollView
+                      showsVerticalScrollIndicator={true}
+                      scrollEnabled={true}
+                      bounces={true}
+                      style={{ maxHeight: 300 }}
+                      contentContainerStyle={{ paddingVertical: 4 }}
+                    >
+                      <SelectGroup>
+                        <SelectLabel>Products</SelectLabel>
+                        {products.length > 1 ? (
+                          products.slice(1).map((product) => (
+                            <SelectItem
+                              key={product.dataValueField}
+                              label={product.dataTextField}
+                              value={product.dataValueField}
+                            >
+                              {product.dataTextField}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem key="no-data" label="No products available" value="no-data" disabled>
+                            No products available
+                          </SelectItem>
+                        )}
+                      </SelectGroup>
+                    </NativeSelectScrollView>
+                  </SelectContent>
+                </Select>
+              </View>
+
+              {/* Category Select */}
+              <View style={styles.inputGroup}>
+                <Text className="text-sm mb-2 font-medium">Categories</Text>
+                <Select
+                  value={selectedCategoryCode ? { value: selectedCategoryCode, label: selectedCategory || '' } : undefined}
+                  onValueChange={(option) => {
+                    if (option?.value) {
+                      handleCategorySelect(option.value);
+                    }
+                  }}
+                  disabled={isCategoryLoading || categories.length === 0}
+                >
+                  <SelectTrigger ref={categoryTriggerRef}>
+                    <SelectValue
+                      placeholder={
+                        isCategoryLoading
+                          ? "Loading categories..."
+                          : categories.length === 0
+                            ? "Select a product first"
+                            : "Select Category"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent insets={contentInsets}>
+                    <NativeSelectScrollView
+                      showsVerticalScrollIndicator={true}
+                      scrollEnabled={true}
+                      bounces={true}
+                      style={{ maxHeight: 300 }}
+                      contentContainerStyle={{ paddingVertical: 4 }}
+                    >
+                      <SelectGroup>
+                        <SelectLabel>Categories</SelectLabel>
+                        {categories.length > 1 ? (
+                          categories.slice(1).map((category) => (
+                            <SelectItem
+                              key={category.dataValueField}
+                              label={category.dataTextField}
+                              value={category.dataValueField}
+                            >
+                              {category.dataTextField}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem key="no-data" label="No categories available" value="no-data" disabled>
+                            No categories available
+                          </SelectItem>
+                        )}
+                      </SelectGroup>
+                    </NativeSelectScrollView>
+                  </SelectContent>
+                </Select>
+              </View>
+
+              {/* Gross Input */}
+              <View style={styles.inputGroup}>
+                <Text className="text-sm mb-2 font-medium">Gross</Text>
+                <View style={styles.inputWithUnit}>
+                  <Input
+                    className="flex-1"
+                    placeholder="Enter Gross"
+                    keyboardType="decimal-pad"
+                    value={gross}
+                    onChangeText={setGross}
+                  />
+                  <Text className="text-sm font-medium">Kg</Text>
+                </View>
+              </View>
+
+              {/* Bale Input */}
+              <View style={styles.inputGroup}>
+                <Text className="text-sm mb-2 font-medium">Bale</Text>
+                <View style={styles.inputWithUnit}>
+                  <Input
+                    className="flex-1"
+                    placeholder="Enter Bale"
+                    keyboardType="decimal-pad"
+                    value={bale}
+                    onChangeText={setBale}
+                  />
+                  <Text className="text-sm font-medium">Kg</Text>
+                </View>
+              </View>
+
+              {/* Wastage Input */}
+              <View style={styles.inputGroup}>
+                <Text className="text-sm mb-2 font-medium">Wastage</Text>
+                <View style={styles.inputWithUnit}>
+                  <Input
+                    className="flex-1"
+                    placeholder="Enter Wastage"
+                    keyboardType="decimal-pad"
+                    value={wastage}
+                    onChangeText={setWastage}
+                  />
+                  <Text className="text-sm font-medium">Kg</Text>
+                </View>
+              </View>
+
+              {/* Price Input */}
+              <View style={styles.inputGroup}>
+                <Text className="text-sm mb-2 font-medium">Price</Text>
+                <View style={styles.inputWithUnit}>
+                  <Input
+                    className="flex-1"
+                    placeholder="Enter Price"
+                    keyboardType="decimal-pad"
+                    value={price}
+                    onChangeText={setPrice}
+                  />
+                  <Text className="text-sm font-medium">Rs.</Text>
+                </View>
+              </View>
+
+            </View>
+
+            {/* Summary Section */}
+            <View className="bg-card rounded-2xl p-5 mb-4 border border-border shadow-sm">
+              <View style={styles.summaryRow}>
+                <Text className="text-foreground text-base font-semibold">Net Kg.</Text>
+                <Text className="text-foreground text-3xl font-bold">
+                  {netKg.toFixed(2)}
+                </Text>
+              </View>
+              <View style={styles.summaryRow}>
+                <Text className="text-foreground text-base font-semibold">Value</Text>
+                <Text className="text-foreground text-3xl font-bold">
+                  {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            </View>
+
+            {/* Add Product Button */}
+            <Pressable 
+              className="bg-primary rounded-full p-4 items-center shadow-md"
+              onPress={handleAddProduct}
+            >
+              <Text className="text-primary-foreground text-lg font-bold">Add Product</Text>
+            </Pressable>
+
+          </ScrollView>
+
+          {/* Selected Cart Item Details Modal */}
+          {selectedCartItem && (
+            <View style={styles.overlay}>
+              <View className="w-11/12 bg-card rounded-xl p-5 border border-border shadow-lg">
+                <Text className="text-foreground text-xl font-bold mb-3 text-center">Product Details</Text>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Product:</Text>
+                  <Text className="text-foreground">{selectedCartItem.product}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Category:</Text>
+                  <Text className="text-foreground">{selectedCartItem.category}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Gross:</Text>
+                  <Text className="text-foreground">{selectedCartItem.gross} Kg</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Bale:</Text>
+                  <Text className="text-foreground">{selectedCartItem.bale} Kg</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Wastage:</Text>
+                  <Text className="text-foreground">{selectedCartItem.wastage} Kg</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Net Kg:</Text>
+                  <Text className="text-foreground">{selectedCartItem.netKg.toFixed(2)} Kg</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Price:</Text>
+                  <Text className="text-foreground">Rs.{selectedCartItem.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text className="font-semibold">Total Value:</Text>
+                  <Text className="text-foreground font-bold">
+                    Rs.{selectedCartItem.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </Text>
-                </Pressable>
-                <Pressable onPress={() => handleRemoveProduct(item.id)}>
-                  <Text style={styles.removeText}>❌</Text>
+                </View>
+
+                <Pressable
+                  className="mt-4 bg-primary p-2.5 rounded-lg items-center"
+                  onPress={() => setSelectedCartItem(null)}
+                >
+                  <Text className="text-primary-foreground font-semibold">Close</Text>
                 </Pressable>
               </View>
-            )}
-          />
-          <Pressable style={styles.placeOrderButton} onPress={handlePlaceOrder}>
-            <Text style={styles.placeOrderText}>Place Order</Text>
-          </Pressable>
+            </View>
+          )}
+
         </View>
-      )}
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Form Card */}
-        <View style={styles.formCard}>
-
-          {/* Product Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Product</Text>
-
-            <Pressable
-              style={styles.dropdown}
-              onPress={() => setShowProductDropdown(!showProductDropdown)}
-            >
-              <Text style={[styles.dropdownText, !selectedProduct && styles.placeholder]}>
-                {selectedProduct || 'Select Product'}
-              </Text>
-              <Text style={styles.dropdownIcon}>▼</Text>
-            </Pressable>
-
-            {showProductDropdown && (
-              <ScrollView style={styles.dropdownMenu}>
-                {products.length > 0 ? (
-                  products.map((product) => (
-                    <Pressable
-                      key={product.dataTextField}
-                      style={styles.dropdownItem}
-                      onPress={() => handleProductSelect(product.dataTextField, product.dataValueField)}
-                    >
-                      <Text style={styles.dropdownItemText}>{product.dataTextField}</Text>
-                    </Pressable>
-                  ))
-                ) : (
-                  <Text style={styles.noDataText}>No products available</Text>
-                )}
-              </ScrollView>
-            )}
-          </View>
-          {/* Category Dropdown */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Categories</Text>
-
-            <Pressable
-              style={styles.dropdown}
-              onPress={() => setShowCategoryDropdown(!showCategoryDropdown)}
-            >
-              <Text style={[styles.dropdownText, !selectedProduct && styles.placeholder]}>
-                {selectedProduct || 'Select Category'}
-              </Text>
-              <Text style={styles.dropdownIcon}>▼</Text>
-            </Pressable>
-
-            {showCategoryDropdown && (
-              <ScrollView style={styles.dropdownMenu}>
-                {categories.length > 0 ? (
-                  categories.map((category) => (
-                    <Pressable
-                      key={category.dataTextField}
-                      style={styles.dropdownItem}
-                      onPress={() => handleCategorySelect(category.dataTextField, category.dataValueField)}
-                    >
-                      <Text style={styles.dropdownItemText}>{category.dataTextField}</Text>
-                    </Pressable>
-                  ))
-                ) : (
-                  <Text style={styles.noDataText}>No categories available</Text>
-                )}
-              </ScrollView>
-            )}
-          </View>
-
-          {/* Gross Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Gross</Text>
-            <View style={styles.inputWithUnit}>
-              <Input
-                style={styles.input}
-                placeholder="Enter Gross"
-                keyboardType="decimal-pad"
-                value={gross}
-                onChangeText={setGross}
-              />
-              <Text style={styles.unit}>Kg</Text>
-            </View>
-          </View>
-
-          {/* Bale Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Bale</Text>
-            <View style={styles.inputWithUnit}>
-              <Input
-                style={styles.input}
-                placeholder="Enter Bale"
-                keyboardType="decimal-pad"
-                value={bale}
-                onChangeText={setBale}
-              />
-              <Text style={styles.unit}>Kg</Text>
-            </View>
-          </View>
-
-          {/* Wastage Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Wastage</Text>
-            <View style={styles.inputWithUnit}>
-              <Input
-                style={styles.input}
-                placeholder="Enter Wastage"
-                keyboardType="decimal-pad"
-                value={wastage}
-                onChangeText={setWastage}
-              />
-              <Text style={styles.unit}>Kg</Text>
-            </View>
-          </View>
-
-          {/* Price Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Price</Text>
-            <View style={styles.inputWithUnit}>
-              <Input
-                style={styles.input}
-                placeholder="Enter Price"
-                keyboardType="decimal-pad"
-                value={price}
-                onChangeText={setPrice}
-              />
-              <Text style={styles.unit}>Rs.</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Summary Section - restored to original styles (unchanged) */}
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Net Kg.</Text>
-            <Text style={styles.summaryValueBlue}>
-              {netKg.toFixed(2)}
-            </Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Value</Text>
-            <Text style={styles.summaryValueGreen}>
-              {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-          </View>
-        </View>
-
-        {/* Add Product Button */}
-        <Pressable style={styles.addButton} onPress={handleAddProduct}>
-          <Text style={styles.addButtonText}>Add Product</Text>
-        </Pressable>
-      </ScrollView>
-    </View>
+      </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  backButton: {
-    padding: 8,
-  },
-  backIcon: {
-    fontSize: 24,
-    color: '#374151',
-  },
-  headerCenter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIcon: {
-    fontSize: 24,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#d97706',
-  },
-  profileButton: {
-    padding: 4,
-  },
-  profileIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f3f4f6',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileIconText: {
-    fontSize: 20,
   },
   scrollView: {
     flex: 1,
@@ -407,108 +520,14 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  formCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
   inputGroup: {
     marginBottom: 20,
     position: 'relative',
-  },
-  label: {
-    fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  dropdown: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 14,
-    backgroundColor: '#ffffff',
-  },
-  dropdownText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  placeholder: {
-    color: '#9ca3af',
-  },
-  dropdownIcon: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 72,
-    left: 0,
-    right: 0,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    maxHeight: 200,
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  dropdownItem: {
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
-  },
-  dropdownItemText: {
-    fontSize: 14,
-    color: '#374151',
-  },
-  noDataText: {
-    padding: 10,
-    textAlign: 'center',
-    color: '#888',
   },
   inputWithUnit: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    padding: 14,
-    fontSize: 14,
-    backgroundColor: '#ffffff',
-  },
-  unit: {
-    fontSize: 14,
-    color: '#6b7280',
-    fontWeight: '500',
-  },
-  summaryCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -516,70 +535,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  summaryLabel: {
-    fontSize: 16,
-    color: '#374151',
-    fontWeight: '600',
+  cartButton: { 
+    position: 'relative', 
+    marginRight: 12, 
+    paddingLeft: 150 
   },
-  summaryValueBlue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#3b82f6',
+  cartIcon: { 
+    fontSize: 60 
   },
-  summaryValueGreen: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#22c55e',
-  },
-  addButton: {
-    backgroundColor: '#22c55e',
-    borderRadius: 50,
-    padding: 18,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  addButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-
-  /* ---------- ADDED CART STYLES (do not modify original styles above) ---------- */
-  cartButton: { position: 'relative', marginRight: 12, paddingLeft: 150 },
-  cartIcon: { fontSize: 60 },
-  cartBadge: {
-    position: 'absolute',
-    top: 10,
-    right: -10,
-    backgroundColor: 'red',
-    borderRadius: 15,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  cartBadgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-  cartDropdown: {
-    backgroundColor: '#fff',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderColor: '#ddd',
-  },
-  cartItem: {
+  cartItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  cartItemText: { fontSize: 14 },
-  removeText: { color: 'red', fontSize: 16 },
-  placeOrderButton: {
-    backgroundColor: '#22c55e',
-    padding: 10,
-    borderRadius: 8,
+  cartItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 8,
+    zIndex: 2000,
   },
-  placeOrderText: { color: '#fff', fontWeight: 'bold' },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
 });

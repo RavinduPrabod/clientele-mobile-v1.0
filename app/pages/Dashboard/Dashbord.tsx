@@ -1,31 +1,26 @@
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StockSummaryData, UserBranch } from '@/app/Types/user.types';
 import { UserStorage } from '@/lib/userStorage';
 import DashboardService from '@/app/services/DashboardService';
 
+import { useColorScheme } from 'nativewind';
+import { getScreenOptions } from '@/components/shared/headerOption';
+
 // Dashboard menu items - Dynamic configuration
 const dashboardMenuItems = [
-    { id: 'purchase', label: 'PURCHASE', icon: '🛒', route: '/pages/purchase', color: '#f59e0b' },
-    { id: 'sales', label: 'SALES', icon: '💵', route: '/pages/sales', color: '#f59e0b' },
-    { id: 'purchase_return', label: 'PURCHASE\nRETURN', icon: '', route: '', color: '#f59e0b' },
-    { id: 'print_receipt', label: 'PRINT\nRECEIPT', icon: '', route: '', color: '#f59e0b' },
-    { id: 'stock_transfer', label: 'STOCK\nTRANSFER', icon: '', route: '', color: '#f59e0b' },
-    { id: 'cancel_stock', label: 'CANCEL STOCK\nTRANSFER', icon: '', route: '', color: '#f59e0b' },
-    { id: 'gross_qty', label: 'GROSS QTY\nADJUSTMENT', icon: '', route: '', color: '#f59e0b' },
-    { id: 'cash_book', label: 'CASH BOOK', icon: '', route: '', color: '#f59e0b' },
-    { id: 'reports', label: 'REPORTS', icon: '', route: '', color: '#f59e0b' },
-    { id: 'day_close', label: 'DAY CLOSE', icon: '', route: '', color: '#f59e0b' },
-    { id: 'stock', label: 'STOCK', icon: '', route: '', color: '#f59e0b' },
-    { id: 'maintenance', label: 'MAINTENANCE', icon: '', route: '', color: '#f59e0b' },
-    { id: 'security', label: 'SECURITY', icon: '', route: '', color: '#f59e0b' },
+    { id: 'purchase', label: 'PURCHASE', icon: '🛒', route: '/pages/purchase' },
+    { id: 'sales', label: 'SALES', icon: '💵', route: '/pages/sales' },
+    { id: 'cash_book', label: 'CASH BOOK', icon: '💼', route: '' },
+    { id: 'reports', label: 'REPORTS', icon: '📊', route: '' }
 ];
 
 export default function Dashboard() {
     const router = useRouter();
+    const { colorScheme } = useColorScheme();
     const [currentBranch, setSelectedBranch] = React.useState<UserBranch | null>(null);
     const [dateTime, setDateTime] = useState(new Date());
     const [dashboardData, setDashboardData] = React.useState<StockSummaryData[]>([]);
@@ -33,9 +28,9 @@ export default function Dashboard() {
     useEffect(() => {
         const interval = setInterval(() => {
             setDateTime(new Date());
-        }, 1000); // Update every second
+        }, 1000);
 
-        return () => clearInterval(interval); // Cleanup on unmount
+        return () => clearInterval(interval);
     }, []);
 
     const formatTime = (date: Date) => {
@@ -43,185 +38,186 @@ export default function Dashboard() {
         const minutes = date.getMinutes().toString().padStart(2, '0');
         const seconds = date.getSeconds().toString().padStart(2, '0');
         return `${hours}:${minutes}:${seconds}`;
+    };
 
-    }; const formatDate = (date: Date) => {
+    const formatDate = (date: Date) => {
         const day = date.getDate().toString().padStart(2, '0');
-        const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Month is 0-indexed
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const year = date.getFullYear();
         return `${day}/${month}/${year}`;
     };
 
-    // Load branches from AsyncStorage
     React.useEffect(() => {
         loadSelectedBrancheData();
     }, []);
 
     const loadSelectedBrancheData = async () => {
         try {
-
-            // Get data from AsyncStorage
             const selectedBranch = await UserStorage.getSelectedBranch();
 
             if (selectedBranch?.companyId != null) {
-
                 setSelectedBranch(selectedBranch);
                 const response = await DashboardService.getDashboardData(selectedBranch.companyId, selectedBranch.processDate);
                 if (response.statusCode == 200) {
                     setDashboardData(await UserStorage.getStockSummary());
                 }
             } else {
-                // No data found - redirect to login
                 console.warn('No branch data found. Redirecting to login...');
-                // router.push('/login'); // Uncomment if you want auto-redirect
             }
-
         } catch (error) {
             console.error('Error loading branches:', error);
-        } finally {
         }
     };
 
     function handleMenuPress(path: string) {
-        console.log("path",path)
-        router.push(path as never);
-    }
-
-    function handleProfilePress() {
-        router.push('/pages/profile');
+        if (path) {
+            console.log("path", path);
+            router.push(path as never);
+        }
     }
 
     return (
-        <View style={styles.container}>
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Dashboard</Text>
-                <Pressable onPress={handleProfilePress} style={styles.profileButton}>
-                    <View style={styles.profileIcon}>
-                        <Text style={styles.profileIconText}>👤</Text>
+        <>
+            <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} />
+            <View className="flex-1 bg-background" style={{ marginTop: 100 }}>
+                <ScrollView
+                    style={styles.scrollView}
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    {/* Header */}
+                    <View style={styles.headerContainer}>
+                        <Text className="text-foreground text-3xl font-bold mb-1">Dashboard</Text>
                     </View>
-                </Pressable>
-            </View>
 
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-                {/* Company Info Section */}
-                <View style={styles.infoSection}>
-                    <View style={styles.infoRow}>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>🏢</Text>
-                            <Text style={styles.infoText}>{currentBranch?.companyName}</Text>
-                        </View>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>📅</Text>
-                            <Text style={styles.infoText}>{formatDate(dateTime)}</Text>
-                        </View>
-                    </View>
-                    <View style={styles.infoRow}>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>📍</Text>
-                            <Text style={styles.infoText}>{currentBranch?.locationName}</Text>
-                        </View>
-                        <View style={styles.infoItem}>
-                            <Text style={styles.infoIcon}>🕐</Text>
-                            <Text style={styles.infoText}>{formatTime(dateTime)}</Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Summary Cards - Fixed */}
-                <View style={styles.summaryCards}>
-                    <View style={[styles.summaryCard, styles.salesCard]}>
-                        <Text style={styles.summaryTitle}>TODAY'S{'\n'}SALE</Text>
-                       <Text style={styles.summaryAmount}>
-                            LKR. {dashboardData?.[0]?.gtNetPurchaseValue?.toLocaleString('en-LK') ?? '0.00'}
-                        </Text>
-
-
-                    </View>
-                    <View style={[styles.summaryCard, styles.purchaseCard]}>
-                        <Text style={styles.summaryTitle}>TODAY'S{'\n'}PURCHASES</Text>
-                        <Text style={styles.summaryAmount}>
-                            LKR. {dashboardData?.[0]?.gtSalesValue?.toLocaleString('en-LK') ?? '0.00'}
-                        </Text>
-                    </View>
-                </View>
-
-                {/* Dynamic Menu Grid */}
-                <View style={styles.menuGrid}>
-                    {dashboardMenuItems.map((item) => (
-                        <Pressable
-                            key={item.id}
-                            style={styles.menuTile}
-                            onPress={() => handleMenuPress(item.route)}
-                        >
-                            <View style={[styles.menuTileInner, { backgroundColor: item.color }]}>
-                                {item.icon && <Text style={styles.menuIcon}>{item.icon}</Text>}
+                    <View style={styles.contentContainer}>
+                        {/* Company Info Card */}
+                        <View className="bg-card border border-border rounded-2xl p-5 mb-6 shadow-sm">
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoItem}>
+                                    <View className="w-11 h-11 rounded-full bg-muted justify-center items-center mr-3">
+                                        <Text style={styles.infoIcon}>🏢</Text>
+                                    </View>
+                                    <View style={styles.infoTextContainer}>
+                                        <Text className="text-muted-foreground text-xs font-medium mb-0.5">Company</Text>
+                                        <Text className="text-foreground text-sm font-semibold">{currentBranch?.companyName}</Text>
+                                    </View>
+                                </View>
+                                <View className="w-px h-10 bg-border mx-3" />
+                                <View style={styles.infoItem}>
+                                    <View className="w-11 h-11 rounded-full bg-muted justify-center items-center mr-3">
+                                        <Text style={styles.infoIcon}>📍</Text>
+                                    </View>
+                                    <View style={styles.infoTextContainer}>
+                                        <Text className="text-muted-foreground text-xs font-medium mb-0.5">Location</Text>
+                                        <Text className="text-foreground text-sm font-semibold">{currentBranch?.locationName}</Text>
+                                    </View>
+                                </View>
                             </View>
-                            <Text style={styles.menuLabel}>{item.label}</Text>
-                        </Pressable>
-                    ))}
-                </View>
-            </ScrollView>
-        </View>
+
+                            <View className="h-px bg-border my-4" />
+
+                            <View style={styles.infoRow}>
+                                <View style={styles.infoItem}>
+                                    <View className="w-11 h-11 rounded-full bg-muted justify-center items-center mr-3">
+                                        <Text style={styles.infoIcon}>📅</Text>
+                                    </View>
+                                    <View style={styles.infoTextContainer}>
+                                        <Text className="text-muted-foreground text-xs font-medium mb-0.5">Date</Text>
+                                        <Text className="text-foreground text-sm font-semibold">{formatDate(dateTime)}</Text>
+                                    </View>
+                                </View>
+                                <View className="w-px h-10 bg-border mx-3" />
+                                <View style={styles.infoItem}>
+                                    <View className="w-11 h-11 rounded-full bg-muted justify-center items-center mr-3">
+                                        <Text style={styles.infoIcon}>🕐</Text>
+                                    </View>
+                                    <View style={styles.infoTextContainer}>
+                                        <Text className="text-muted-foreground text-xs font-medium mb-0.5">Time</Text>
+                                        <Text className="text-foreground text-sm font-semibold">{formatTime(dateTime)}</Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Summary Cards */}
+                        <View style={styles.summarySection}>
+                            <Text className="text-foreground text-xl font-bold mb-4">Today's Overview</Text>
+                            <View style={styles.summaryCards}>
+                                <View className="flex-1 bg-card border border-border rounded-2xl p-5 shadow-sm">
+                                    <View style={styles.cardHeader}>
+                                        <View className="w-10 h-10 rounded-xl bg-muted justify-center items-center">
+                                            <Text style={styles.cardIcon}>💰</Text>
+                                        </View>
+                                        <Text className="text-muted-foreground text-xs font-bold tracking-wider">SALES</Text>
+                                    </View>
+                                    <Text className="text-foreground text-xl font-extrabold mb-1">
+                                        LKR {dashboardData?.[0]?.gtNetPurchaseValue?.toLocaleString('en-LK') ?? '0.00'}
+                                    </Text>
+                                    <Text className="text-muted-foreground text-xs font-medium">Today's Revenue</Text>
+                                </View>
+
+                                <View className="flex-1 bg-card border border-border rounded-2xl p-5 shadow-sm ml-3">
+                                    <View style={styles.cardHeader}>
+                                        <View className="w-10 h-10 rounded-xl bg-muted justify-center items-center">
+                                            <Text style={styles.cardIcon}>🛒</Text>
+                                        </View>
+                                        <Text className="text-muted-foreground text-xs font-bold tracking-wider">PURCHASES</Text>
+                                    </View>
+                                    <Text className="text-foreground text-xl font-extrabold mb-1">
+                                        LKR {dashboardData?.[0]?.gtSalesValue?.toLocaleString('en-LK') ?? '0.00'}
+                                    </Text>
+                                    <Text className="text-muted-foreground text-xs font-medium">Today's Expenses</Text>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Menu Section */}
+                        <View style={styles.menuSection}>
+                            <Text className="text-foreground text-xl font-bold mb-4">Quick Actions</Text>
+                            <View style={styles.menuGrid}>
+                                {dashboardMenuItems.map((item) => (
+                                    <Pressable
+                                        key={item.id}
+                                        style={({ pressed }) => [
+                                            styles.menuTile,
+                                            pressed && styles.menuTilePressed
+                                        ]}
+                                        onPress={() => handleMenuPress(item.route)}
+                                    >
+                                        <View className="flex-1 bg-muted rounded-2xl justify-center items-center mb-2 shadow-sm">
+                                            {item.icon && <Text style={styles.menuIcon}>{item.icon}</Text>}
+                                        </View>
+                                        <Text className="text-foreground text-xs font-semibold text-center">{item.label}</Text>
+                                    </Pressable>
+                                ))}
+                            </View>
+                        </View>
+                    </View>
+                </ScrollView>
+            </View>
+        </>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingTop: 50,
-        paddingBottom: 16,
-        backgroundColor: '#ffffff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#e5e7eb',
-    },
-    headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#d97706',
-    },
-    profileButton: {
-        padding: 4,
-    },
-    profileIcon: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: '#f3f4f6',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    profileIconText: {
-        fontSize: 24,
-    },
     scrollView: {
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 32,
+        paddingBottom: 24,
     },
-    infoSection: {
-        backgroundColor: '#ffffff',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
+    headerContainer: {
+        marginBottom: 30,
+        paddingHorizontal: 20,
+    },
+    contentContainer: {
+        paddingHorizontal: 20,
     },
     infoRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 12,
+        alignItems: 'center',
     },
     infoItem: {
         flexDirection: 'row',
@@ -229,83 +225,45 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     infoIcon: {
-        fontSize: 18,
-        marginRight: 8,
+        fontSize: 20,
     },
-    infoText: {
-        fontSize: 14,
-        color: '#6b7280',
-        fontWeight: '500',
+    infoTextContainer: {
+        flex: 1,
+    },
+    summarySection: {
+        marginBottom: 24,
     },
     summaryCards: {
         flexDirection: 'row',
-        gap: 12,
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 16,
     },
-    summaryCard: {
-        flex: 1,
-        borderRadius: 16,
-        padding: 20,
-        minHeight: 120,
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    salesCard: {
-        backgroundColor: '#22c55e',
-    },
-    purchaseCard: {
-        backgroundColor: '#d97706',
-    },
-    summaryTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#ffffff',
-        lineHeight: 22,
-    },
-    summaryAmount: {
+    cardIcon: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#ffffff',
-        marginTop: 8,
+    },
+    menuSection: {
+        marginBottom: 24,
     },
     menuGrid: {
+        justifyContent:'center',
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 12,
+        gap: 45,
     },
     menuTile: {
-        width: '30.5%',
+        width: '30%',
         aspectRatio: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 4,
+        marginBottom: 12,
     },
-    menuTileInner: {
-        width: '100%',
-        height: '70%',
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-        elevation: 2,
+    menuTilePressed: {
+        opacity: 0.7,
+        transform: [{ scale: 0.95 }],
     },
     menuIcon: {
         fontSize: 32,
-    },
-    menuLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-        color: '#6b7280',
-        textAlign: 'center',
-        marginTop: 8,
-        textTransform: 'uppercase',
-        lineHeight: 12,
     },
 });

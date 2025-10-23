@@ -131,7 +131,7 @@ export default function SalesForm() {
 
         {/* Cart Icon with Badge */}
         <Pressable onPress={() => setShowCart(!showCart)} style={styles.cartButton}>
-          <Text style={styles.cartIcon}><Image source={require('assets/images/bag.png')}/></Text>
+          <Text style={styles.cartIcon}><Image source={require('assets/images/add-to-cart.png')}/></Text>
           {cart.length > 0 && (
             <View style={styles.cartBadge}>
               <Text style={styles.cartBadgeText}>{cart.length}</Text>

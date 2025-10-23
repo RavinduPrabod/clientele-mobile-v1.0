@@ -13,7 +13,6 @@ export default function ProfileScreen() {
 
   function handleSignOut(){
     AuthService.logout();
-    router.push('/pages/sign-in-form')
   }
 
   return (
