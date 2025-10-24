@@ -3,19 +3,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { Pressable, ScrollView, StyleSheet, View, FlatList, Image, Platform } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, FlatList, Image, Alert, ToastAndroid } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { TransactionDetails, TransactionsSavingDto, ComboDTO } from '@/app/Types/user.types';
+import { TransactionDetails, TransactionsSavingDto } from '@/app/Types/user.types';
 import TransactionService from '@/app/services/TransactionService';
-import { ToastAndroid } from 'react-native';
 import { NativeSelectScrollView, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TriggerRef } from '@rn-primitives/select';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from 'nativewind';
 import { getScreenOptions } from '@/components/shared/headerOption';
+import { UserStorage } from '@/lib/userStorage';
+import mapCartToTransactionDto from '@/components/shared/dataMaping';
+import { AlertDescription } from '@/components/ui/alert';
 
 export default function PurchaseForm() {
   const router = useRouter();
+  const { colorScheme } = useColorScheme();
+
   // Form state
   const [selectedProduct, setSelectedProduct] = React.useState<string | null>(null);
   const [selectedProductCode, setSelectedProductCode] = React.useState<string | null>(null);
@@ -26,12 +29,12 @@ export default function PurchaseForm() {
   const [wastage, setWastage] = React.useState('');
   const [price, setPrice] = React.useState('');
 
-  // dataset bind
+  // Dataset bind
   const [products, setProducts] = React.useState<any[]>([]);
   const [categories, setCategories] = React.useState<any[]>([]);
 
-  // Cart state
-  const [cart, setCart] = React.useState<any[]>([]);
+  // Cart state - Fixed: Use TransactionDetails type
+  const [cart, setCart] = React.useState<TransactionDetails[]>([]);
   const [showCart, setShowCart] = React.useState(false);
   const [selectedCartItem, setSelectedCartItem] = React.useState<any | null>(null);
 
@@ -53,11 +56,7 @@ export default function PurchaseForm() {
   const scrollRef = React.useRef<ScrollView>(null);
   const productTriggerRef = React.useRef<TriggerRef>(null);
   const categoryTriggerRef = React.useRef<TriggerRef>(null);
-  const insets = useSafeAreaInsets();
 
-  const { colorScheme } = useColorScheme();
-
-  // Simplified content insets
   const contentInsets = {
     top: 20,
     bottom: 20,
@@ -65,7 +64,6 @@ export default function PurchaseForm() {
     right: 12,
   };
 
-  // Load products on mount
   React.useEffect(() => {
     loadActiveProductList();
   }, []);
@@ -79,16 +77,13 @@ export default function PurchaseForm() {
   const loadActiveProductList = async () => {
     try {
       const response = await TransactionService.getActiveProductList();
-      console.log('✅ Product API Response:', response);
-
       if (response?.statusCode === 200 && Array.isArray(response.data)) {
         setProducts(response.data);
       } else {
-        console.warn('⚠️ No valid product list found');
         setProducts([]);
       }
     } catch (error) {
-      console.error('❌ Error loading product list:', error);
+      console.error('Error loading product list:', error);
     }
   };
 
@@ -126,6 +121,7 @@ export default function PurchaseForm() {
       console.error('❌ Error loading Category list:', error);
       setIsCategoryLoading(false);
     }
+
   };
 
   const handleCategorySelect = (categoryCode: string) => {
@@ -136,64 +132,105 @@ export default function PurchaseForm() {
     }
   };
 
-  function handleAddProduct() {
-    // Validate form
+  async function handleAddProduct() {
     if (!selectedProduct || !selectedCategory || !gross || !price) {
-      alert('Please fill all required fields');
+      Alert.alert('Alert', 'Please fill all required fields');
       return;
     }
 
-    // Handle product addition
-    const productData = {
-      id: Date.now(), // unique id
-      product: selectedProduct,
-      category: selectedCategory,
-      gross: parseFloat(gross),
-      bale: parseFloat(bale) || 0,
-      wastage: parseFloat(wastage) || 0,
-      price: parseFloat(price),
-      netKg,
-      totalValue,
-    };
+    try {
+      const selectedBranch = await UserStorage.getSelectedBranch();
+      const companyId = selectedBranch?.companyId || 0;
+      const userId = selectedBranch?.userId || 'Unknown';
+      const currentDate = new Date().toISOString();
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
 
-    setCart(prev => [...prev, productData]);
+      // Create TransactionDetails object
+      const transactionDetail: TransactionDetails = {
+        CompanyId: companyId,
+        DocNo: 0,
+        SerialNo: 0,
+        TxnDate: currentDate,
+        TxnYear: currentYear,
+        TxnMonth: currentMonth,
+        SeqNo: cart.length + 1,
+        ProductId: selectedProductCode || '',
+        CategoryCode: selectedCategoryCode || '',
+        GrossQty: parseFloat(gross),
+        BaleQty: parseFloat(bale) || 0,
+        WastageQty: parseFloat(wastage) || 0,
+        NetQty: netKg,
+        UnitPrice: parseFloat(price),
+        NetValue: totalValue,
+        StockInOut: 0,
+        ReturnSerialNo: 0,
+        ReturnQty: 0,
+        IsPrint: 0,
+        CreatedBy: userId,
+        CreatedDateTime: currentDate,
+        CreatedWorkStation: 'Mobile'
+      };
 
-    ToastAndroid.show('Product added to cart!', ToastAndroid.SHORT);
+      setCart(prev => [...prev, transactionDetail]);
+      ToastAndroid.show('Product added to cart!', ToastAndroid.SHORT);
 
-    if (scrollRef.current) {
-      scrollRef.current.scrollTo({ y: 0, animated: true });
+      if (scrollRef.current) {
+        scrollRef.current.scrollTo({ y: 0, animated: true });
+      }
+
+      // Reset form
+      setSelectedProduct(null);
+      setSelectedProductCode(null);
+      setSelectedCategory(null);
+      setSelectedCategoryCode(null);
+      setGross('');
+      setBale('');
+      setWastage('');
+      setPrice('');
+    } catch (error) {
+      console.error('Error adding product:', error);
+      Alert.alert('Error', 'Failed to add product to cart');
     }
-
-    // Reset form
-    setSelectedProduct(null);
-    setSelectedProductCode(null);
-    setSelectedCategory(null);
-    setSelectedCategoryCode(null);
-    setGross('');
-    setBale('');
-    setWastage('');
-    setPrice('');
   }
 
-  const handleRemoveProduct = (id: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== id));
+  const handleRemoveProduct = (serialNo: number) => {
+    setCart((prevCart) => prevCart.filter((item) => item.SerialNo !== serialNo));
   };
 
-  function handlePlaceOrder() {
-    console.log('Placing order:', cart);
+  async function handlePlaceOrder() {
     if (cart.length === 0) {
-      alert('Your cart is empty!');
+      Alert.alert('Error', 'Your cart is empty!');
       return;
     }
-    console.log('Placing order:', cart);
-    alert('Order placed successfully!');
-    setCart([]);
-    setShowCart(false);
+
+    try {
+      // Map cart to transaction DTO
+      const transactionDto = await mapCartToTransactionDto(
+        cart,
+        1 // purchase
+      );
+
+      console.log('Sending to API:', JSON.stringify(transactionDto, null, 2));
+
+      const response = await TransactionService.insertTransactionDetails(transactionDto);
+
+      if (response.statusCode === 200) {
+        ToastAndroid.show('Order placed successfully!', ToastAndroid.SHORT);
+        setCart([]);
+        setShowCart(false);
+      } else {
+        Alert.alert('Error', 'Failed to place order');
+      }
+    } catch (error) {
+      console.error('Error placing order:', error);
+      Alert.alert('Error', 'Failed to place order. Please try again.');
+    }
   }
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} />
+      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: false })} />
       <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
         <View style={styles.container}>
           {/* Header */}
@@ -202,7 +239,7 @@ export default function PurchaseForm() {
             {/* Cart Icon with Badge */}
             <Pressable onPress={() => {
               if (cart.length === 0) {
-                alert('Your cart is empty. Please add at least one product.');
+                Alert.alert('Error', 'Your cart is empty. Please add at least one product.');
                 return;
               }
               setShowCart(!showCart);
@@ -217,29 +254,30 @@ export default function PurchaseForm() {
             </Pressable>
           </View>
 
-          {/* Cart Dropdown */}
+          {/* Cart Dropdown - FIXED */}
           {showCart && (
             <View className="bg-card p-3 border-b border-border">
               <Text className="text-foreground text-lg font-bold mb-3 text-center">🛒 Cart Summary</Text>
               <FlatList
                 data={cart}
-                keyExtractor={(item) => item.id.toString()}
+                keyExtractor={(item) => item.SerialNo.toString()}
                 renderItem={({ item }) => (
                   <Pressable
                     className="bg-muted rounded-xl p-3 mb-2.5 border border-border"
                     onPress={() => setSelectedCartItem(item)}
                   >
                     <View style={styles.cartItemHeader}>
-                      <Text className="text-foreground font-bold text-base">{item.product}</Text>
-                      <Text className="text-sm">{item.category}</Text>
+                      <Text className="text-foreground font-bold text-base">{item.ProductId}</Text>
+                      <Text className="text-muted-foreground text-sm">{item.CategoryCode}</Text>
                     </View>
                     <View style={styles.cartItemRow}>
-                      <Text className="text-xs">Net: {item.netKg.toFixed(2)} Kg</Text>
-                      <Text className="text-xs">Rs.{item.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-                      {totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      <Text className="text-muted-foreground text-xs">Net: {item.NetQty.toFixed(2)} Kg</Text>
+                      <Text className="text-muted-foreground text-xs">
+                        Rs.{item.NetValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
                     </View>
-                    <Pressable 
-                      onPress={() => handleRemoveProduct(item.id)} 
+                    <Pressable
+                      onPress={() => handleRemoveProduct(item.SerialNo)}
                       className="self-end bg-destructive/10 rounded-md py-1 px-2 mt-1.5"
                     >
                       <Text className="text-destructive font-semibold text-xs">Remove</Text>
@@ -248,7 +286,7 @@ export default function PurchaseForm() {
                 )}
               />
 
-              <Pressable 
+              <Pressable
                 className="bg-primary rounded-lg p-2.5 items-center mt-2"
                 onPress={handlePlaceOrder}
               >
@@ -268,7 +306,7 @@ export default function PurchaseForm() {
 
               {/* Product Select */}
               <View style={styles.inputGroup}>
-                <Text className="text-sm mb-2 font-medium">Products</Text>
+                <Text className="text-muted-foreground text-sm mb-2 font-medium">Product</Text>
                 <Select
                   value={selectedProductCode ? { value: selectedProductCode, label: selectedProduct || '' } : undefined}
                   onValueChange={(option) => {
@@ -313,7 +351,7 @@ export default function PurchaseForm() {
 
               {/* Category Select */}
               <View style={styles.inputGroup}>
-                <Text className="text-sm mb-2 font-medium">Categories</Text>
+                <Text className="text-muted-foreground text-sm mb-2 font-medium">Category</Text>
                 <Select
                   value={selectedCategoryCode ? { value: selectedCategoryCode, label: selectedCategory || '' } : undefined}
                   onValueChange={(option) => {
@@ -365,9 +403,9 @@ export default function PurchaseForm() {
                 </Select>
               </View>
 
-              {/* Gross Input */}
+              {/* Input fields */}
               <View style={styles.inputGroup}>
-                <Text className="text-sm mb-2 font-medium">Gross</Text>
+                <Text className="text-muted-foreground text-sm mb-2 font-medium">Gross</Text>
                 <View style={styles.inputWithUnit}>
                   <Input
                     className="flex-1"
@@ -376,13 +414,12 @@ export default function PurchaseForm() {
                     value={gross}
                     onChangeText={setGross}
                   />
-                  <Text className="text-sm font-medium">Kg</Text>
+                  <Text className="text-muted-foreground text-sm font-medium">Kg</Text>
                 </View>
               </View>
 
-              {/* Bale Input */}
               <View style={styles.inputGroup}>
-                <Text className="text-sm mb-2 font-medium">Bale</Text>
+                <Text className="text-muted-foreground text-sm mb-2 font-medium">Bale</Text>
                 <View style={styles.inputWithUnit}>
                   <Input
                     className="flex-1"
@@ -391,13 +428,12 @@ export default function PurchaseForm() {
                     value={bale}
                     onChangeText={setBale}
                   />
-                  <Text className="text-sm font-medium">Kg</Text>
+                  <Text className="text-muted-foreground text-sm font-medium">Kg</Text>
                 </View>
               </View>
 
-              {/* Wastage Input */}
               <View style={styles.inputGroup}>
-                <Text className="text-sm mb-2 font-medium">Wastage</Text>
+                <Text className="text-muted-foreground text-sm mb-2 font-medium">Wastage</Text>
                 <View style={styles.inputWithUnit}>
                   <Input
                     className="flex-1"
@@ -406,13 +442,12 @@ export default function PurchaseForm() {
                     value={wastage}
                     onChangeText={setWastage}
                   />
-                  <Text className="text-sm font-medium">Kg</Text>
+                  <Text className="text-muted-foreground text-sm font-medium">Kg</Text>
                 </View>
               </View>
 
-              {/* Price Input */}
               <View style={styles.inputGroup}>
-                <Text className="text-sm mb-2 font-medium">Price</Text>
+                <Text className="text-muted-foreground text-sm mb-2 font-medium">Price</Text>
                 <View style={styles.inputWithUnit}>
                   <Input
                     className="flex-1"
@@ -421,10 +456,10 @@ export default function PurchaseForm() {
                     value={price}
                     onChangeText={setPrice}
                   />
-                  <Text className="text-sm font-medium">Rs.</Text>
+                  <Text className="text-muted-foreground text-sm font-medium">Rs.</Text>
                 </View>
               </View>
-
+              
             </View>
 
             {/* Summary Section */}
@@ -444,13 +479,12 @@ export default function PurchaseForm() {
             </View>
 
             {/* Add Product Button */}
-            <Pressable 
+            <Pressable
               className="bg-primary rounded-full p-4 items-center shadow-md"
               onPress={handleAddProduct}
             >
               <Text className="text-primary-foreground text-lg font-bold">Add Product</Text>
             </Pressable>
-
           </ScrollView>
 
           {/* Selected Cart Item Details Modal */}
@@ -459,37 +493,37 @@ export default function PurchaseForm() {
               <View className="w-11/12 bg-card rounded-xl p-5 border border-border shadow-lg">
                 <Text className="text-foreground text-xl font-bold mb-3 text-center">Product Details</Text>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Product:</Text>
-                  <Text className="text-foreground">{selectedCartItem.product}</Text>
+                  <Text className="text-muted-foreground font-semibold">Product:</Text>
+                  <Text className="text-foreground">{selectedCartItem.ProductId}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Category:</Text>
-                  <Text className="text-foreground">{selectedCartItem.category}</Text>
+                  <Text className="text-muted-foreground font-semibold">Category:</Text>
+                  <Text className="text-foreground">{selectedCartItem.CategoryCode}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Gross:</Text>
-                  <Text className="text-foreground">{selectedCartItem.gross} Kg</Text>
+                  <Text className="text-muted-foreground font-semibold">Gross:</Text>
+                  <Text className="text-foreground">{selectedCartItem.GrossQty} Kg</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Bale:</Text>
-                  <Text className="text-foreground">{selectedCartItem.bale} Kg</Text>
+                  <Text className="text-muted-foreground font-semibold">Bale:</Text>
+                  <Text className="text-foreground">{selectedCartItem.BaleQty} Kg</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Wastage:</Text>
-                  <Text className="text-foreground">{selectedCartItem.wastage} Kg</Text>
+                  <Text className="text-muted-foreground font-semibold">Wastage:</Text>
+                  <Text className="text-foreground">{selectedCartItem.WastageQty} Kg</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Net Kg:</Text>
-                  <Text className="text-foreground">{selectedCartItem.netKg.toFixed(2)} Kg</Text>
+                  <Text className="text-muted-foreground font-semibold">Net Kg:</Text>
+                  <Text className="text-foreground">{selectedCartItem.NetQty.toFixed(2)} Kg</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Price:</Text>
-                  <Text className="text-foreground">Rs.{selectedCartItem.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                  <Text className="text-muted-foreground font-semibold">Price:</Text>
+                  <Text className="text-foreground">Rs.{selectedCartItem.UnitPrice.toFixed(2)}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text className="font-semibold">Total Value:</Text>
+                  <Text className="text-muted-foreground font-semibold">Total Value:</Text>
                   <Text className="text-foreground font-bold">
-                    Rs.{selectedCartItem.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Rs.{selectedCartItem.NetValue.toFixed(2)}
                   </Text>
                 </View>
 
@@ -502,7 +536,6 @@ export default function PurchaseForm() {
               </View>
             </View>
           )}
-
         </View>
       </View>
     </>
@@ -535,13 +568,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  cartButton: { 
-    position: 'relative', 
-    marginRight: 12, 
-    paddingLeft: 150 
+  cartButton: {
+    position: 'relative',
+    marginRight: 12,
+    paddingLeft: 150
   },
-  cartIcon: { 
-    fontSize: 60 
+  cartIcon: {
+    fontSize: 60
   },
   cartItemHeader: {
     flexDirection: 'row',

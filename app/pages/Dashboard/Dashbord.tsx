@@ -13,9 +13,7 @@ import { getScreenOptions } from '@/components/shared/headerOption';
 // Dashboard menu items - Dynamic configuration
 const dashboardMenuItems = [
     { id: 'purchase', label: 'PURCHASE', icon: '🛒', route: '/pages/purchase' },
-    { id: 'sales', label: 'SALES', icon: '💵', route: '/pages/sales' },
-    { id: 'cash_book', label: 'CASH BOOK', icon: '💼', route: '' },
-    { id: 'reports', label: 'REPORTS', icon: '📊', route: '' }
+    { id: 'sales', label: 'SALES', icon: '💵', route: '/pages/sales' }
 ];
 
 export default function Dashboard() {

@@ -175,7 +175,6 @@ class AuthService {
     try {
       await TokenStorage.clearTokens(await TokenStorage.getAccessToken())
       console.log("logout token", await TokenStorage.getAccessToken())
-      router.replace('/')   
     } catch (error) {
       console.error('Logout error:', error);
     }
