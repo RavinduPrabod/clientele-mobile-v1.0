@@ -74,7 +74,11 @@ export default function SignInForm() {
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: false })} />
+      <Stack.Screen 
+        options={getScreenOptions(colorScheme ?? 'light', { 
+          showThemeToggle: true 
+        })}
+      />
       <ScrollView contentContainerStyle={styles.scrollContainer} className="bg-background">
         <View style={styles.container}>
           {/* Logo Section - Fixed at Top */}

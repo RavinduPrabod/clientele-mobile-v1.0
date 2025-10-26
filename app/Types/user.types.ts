@@ -174,3 +174,15 @@ export interface LoginResponse {
   error?: string;
   statusCode: number;
 }
+
+export interface TempCart{
+  seqNo: number;
+  productName: string;
+  CategoryName?: string;
+  GrossQty: number;
+  BaleQty: number;
+  WastageQty: number;
+  NetQty: number;
+  UnitPrice: number;
+  NetValue: number;
+}

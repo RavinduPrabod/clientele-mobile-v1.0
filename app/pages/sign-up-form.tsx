@@ -1,39 +1,93 @@
 import { getScreenOptions } from '@/components/shared/headerOption';
-import { SocialConnections } from '@/components/social-connections';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Text } from '@/components/ui/text';
 import { router, Stack } from 'expo-router';
 import * as React from 'react';
 import { useColorScheme } from 'nativewind';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import DeviceInfo from 'react-native-device-info';
+import AuthService from '../services/AuthService';
+import { UserStorage } from '@/lib/userStorage';
 
 export default function SignUpForm() {
+  const userNameInputRef = React.useRef<TextInput | null>(null);
   const passwordInputRef = React.useRef<TextInput>(null);
   const confirmPasswordInputRef = React.useRef<TextInput>(null);
   const { colorScheme } = useColorScheme();
+  const [loading, setLoading] = React.useState(false);
 
-  function onUsernameSubmitEditing() {
-    passwordInputRef.current?.focus();
+  const [userId, setUserId] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [confirmpassword, setConfirmPassword] = React.useState('');
+  const uniqueId = DeviceInfo.getUniqueId();
+
+  function onUserNameSubmitEditing() {
+    userNameInputRef.current?.focus();
   }
 
   function onPasswordSubmitEditing() {
+    passwordInputRef.current?.focus();
+  }
+
+  function onConfirmPasswordSubmitEditing() {
     confirmPasswordInputRef.current?.focus();
   }
 
   function onSubmit() {
-    // Handle registration logic
-  }
+   handleSignUp();
+  };
 
   function onSubmitSignIn() {
     router.replace("/");
   }
 
+  const handleSignUp = async () => {
+ if (!userId.trim() || !password.trim() || !confirmpassword.trim()) {
+      Alert.alert('Error', 'Please enter User ID, Password and Confirm Password');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Call the login API
+      const response = await AuthService.getLoggedUser(userId, password);
+
+      if (response.success && response.data) {
+        const userBranches = await UserStorage.getUserBranches();
+
+        if (Array.isArray(userBranches) && userBranches.length > 1) {
+          // Navigate to Switch Company page
+          router.push('/pages/switch-company-form');
+        } else {
+          await UserStorage.saveSelectedBranch(userBranches[0]);
+          const UserCode = userBranches[0].userId + "$" + userBranches[0].companyId
+          const response = await AuthService.getTokenString(UserCode);
+
+          if (response?.data) {
+            // Navigate to Dashboard
+            router.push('/pages/Dashboard/Dashbord');
+          } else {
+            console.warn('No data in response:', response);
+          }
+        }
+
+      } else {
+        Alert.alert('Login Failed', response.error || 'Invalid credentials');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: false })} />
+      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
       <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} className="bg-background">
           <View style={styles.container}>
@@ -63,16 +117,15 @@ export default function SignUpForm() {
                     id="userName"
                     placeholder="Enter Your Username"
                     autoCapitalize="none"
-                    onSubmitEditing={onUsernameSubmitEditing}
+                    onSubmitEditing={onUserNameSubmitEditing}
                     returnKeyType="next"
                     submitBehavior="submit"
                     onChangeText={(text) => {
-                      if (text.includes('$')) {
-                        Alert.alert('Invalid Character', 'The "$" symbol is not allowed in the username.');
-                        return; // Prevent update
-                      }
-                      //onSubmit(text);
+                      // Remove any $ symbols from input
+                      const cleanedText = text.replace(/\$/g, '');
+                      setUserId(cleanedText);
                     }}
+                    editable={!loading}
                   />
                 </View>
 
@@ -86,12 +139,11 @@ export default function SignUpForm() {
                     returnKeyType="next"
                     onSubmitEditing={onPasswordSubmitEditing}
                     onChangeText={(text) => {
-                      if (text.includes('$')) {
-                        Alert.alert('Invalid Character', 'The "$" symbol is not allowed in the password.');
-                        return; // Prevent update
-                      }
-                      //onSubmit(text);
+                      // Remove any $ symbols from input
+                      const cleanedText = text.replace(/\$/g, '');
+                      setPassword(cleanedText);
                     }}
+                    editable={!loading}
                   />
                 </View>
 
@@ -103,22 +155,26 @@ export default function SignUpForm() {
                     placeholder="Enter Your Confirm Password"
                     secureTextEntry
                     returnKeyType="send"
-                    onSubmitEditing={onSubmit}
+                    onSubmitEditing={onConfirmPasswordSubmitEditing}
                     onChangeText={(text) => {
-                      if (text.includes('$')) {
-                        Alert.alert('Invalid Character', 'The "$" symbol is not allowed in the password.');
-                        return; // Prevent update
-                      }
-                      //onSubmit(text);
+                      // Remove any $ symbols from input
+                      const cleanedText = text.replace(/\$/g, '');
+                      setConfirmPassword(cleanedText);
                     }}
+                    editable={!loading}
                   />
                 </View>
 
                 <Button
-                  className="w-full bg-primary"
+                  className={`w-full bg-primary ${loading ? 'opacity-50' : ''}`}
                   onPress={onSubmit}
+                  disabled={loading}
                 >
-                  <Text className="text-primary-foreground font-medium">Continue</Text>
+                  {loading ? (
+                    <ActivityIndicator className="text-primary-foreground" />
+                  ) : (
+                    <Text className="text-primary-foreground font-medium">Continue</Text>
+                  )}
                 </Button>
               </View>
 

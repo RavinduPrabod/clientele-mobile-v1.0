@@ -1,7 +1,7 @@
 export class Auth {
   GetLoggedUser = "/Auth/GetLoggedUser";
   ValidateUser = "/Auth/ValidateUser";
-  getTokenString = "/Auth/GenerateTokenAsync";
+  getTokenString = "/Auth/GenerateTokenAsync"; 
 }
 
 export class Dashboard {

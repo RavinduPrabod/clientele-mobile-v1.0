@@ -1,11 +1,11 @@
+// headerOption.tsx
 import React from 'react';
-import { View, Pressable, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { THEME } from '@/lib/theme';
 import { MoonStarIcon, SunIcon } from 'lucide-react-native';
 import { useColorScheme } from 'nativewind';
-import { useRouter } from 'expo-router';
 
 const THEME_ICONS = {
   light: SunIcon,
@@ -26,32 +26,31 @@ function ThemeToggle() {
   );
 }
 
-function HeaderActions({ showProfileButton = true }: { showProfileButton?: boolean }) {
-  const router = useRouter();
+interface HeaderActionsProps {
+  showThemeToggle?: boolean;
+}
 
-  function handleProfilePress() {
-    router.push('/pages/profile');
+function HeaderActions({ showThemeToggle = true }: HeaderActionsProps) {
+  if (!showThemeToggle) {
+    return null;
   }
 
   return (
     <View style={styles.actionContainer}>
       <ThemeToggle />
-      {showProfileButton && (
-        <Pressable onPress={handleProfilePress} style={styles.profileButton}>
-          <View style={styles.profileIcon}>
-            <Text style={styles.profileIconText}>👤</Text>
-          </View>
-        </Pressable>
-      )}
     </View>
   );
 }
 
+interface ScreenOptionsConfig {
+  showThemeToggle?: boolean;
+}
+
 export function getScreenOptions(
   colorScheme: 'light' | 'dark' = 'light',
-  options?: { showProfileButton?: boolean }
+  config: ScreenOptionsConfig = {}
 ) {
-  const { showProfileButton = true } = options || {};
+  const { showThemeToggle = true } = config;
 
   return {
     title: '',
@@ -63,7 +62,7 @@ export function getScreenOptions(
           ? THEME.light.background
           : THEME.dark.background,
     },
-    headerRight: () => <HeaderActions showProfileButton={showProfileButton} />,
+    headerRight: () => <HeaderActions showThemeToggle={showThemeToggle} />,
   };
 }
 
@@ -73,19 +72,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 8,
   },
-  profileButton: {
-    marginLeft: 4,
-    padding: 6,
-  },
-  profileIcon: {
-    backgroundColor: '#e0e0e0',
-    borderRadius: 20,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  profileIconText: {
-    fontSize: 16,
-  },
 });
+
+// ================================================================
+// USAGE EXAMPLES:
+// ================================================================
+
+/*
+// Example 1: Show theme toggle (default behavior)
+import { getScreenOptions } from '@/components/shared/headerOption';
+import { useColorScheme } from 'nativewind';
+
+export default function MyScreen() {
+  const { colorScheme } = useColorScheme();
+  
+  return (
+    <>
+      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
+      // Your screen content
+    </>
+  );
+}
+
+// Example 2: Hide theme toggle
+export default function MyScreen() {
+  const { colorScheme } = useColorScheme();
+  
+  return (
+    <>
+      <Stack.Screen 
+        options={getScreenOptions(colorScheme ?? 'light', { 
+          showThemeToggle: false 
+        })} 
+      />
+      // Your screen content
+    </>
+  );
+}
+
+// Example 3: Show theme toggle explicitly
+export default function MyScreen() {
+  const { colorScheme } = useColorScheme();
+  
+  return (
+    <>
+      <Stack.Screen 
+        options={getScreenOptions(colorScheme ?? 'light', { 
+          showThemeToggle: true 
+        })} 
+      />
+      // Your screen content
+    </>
+  );
+}
+*/

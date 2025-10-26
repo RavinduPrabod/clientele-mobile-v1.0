@@ -19,7 +19,7 @@ export default function CartTab() {
   return (
     <>
       <Stack.Screen 
-        options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} 
+        options={getScreenOptions(colorScheme ?? 'light')} 
       />
       <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
         <View style={styles.container}>

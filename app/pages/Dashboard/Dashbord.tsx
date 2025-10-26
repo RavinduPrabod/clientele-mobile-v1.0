@@ -1,6 +1,7 @@
+// dashboard.tsx
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StockSummaryData, UserBranch } from '@/app/Types/user.types';
@@ -76,7 +77,7 @@ export default function Dashboard() {
 
     return (
         <>
-            <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} />
+            <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
             <View className="flex-1 bg-background" style={{ marginTop: 100 }}>
                 <ScrollView
                     style={styles.scrollView}
@@ -174,7 +175,7 @@ export default function Dashboard() {
                         <View style={styles.menuSection}>
                             <Text className="text-foreground text-xl font-bold mb-4">Quick Actions</Text>
                             <View style={styles.menuGrid}>
-                                {dashboardMenuItems.map((item) => (
+                                {/* {dashboardMenuItems.map((item) => (
                                     <Pressable
                                         key={item.id}
                                         style={({ pressed }) => [
@@ -188,7 +189,7 @@ export default function Dashboard() {
                                         </View>
                                         <Text className="text-foreground text-xs font-semibold text-center">{item.label}</Text>
                                     </Pressable>
-                                ))}
+                                ))} */}
                             </View>
                         </View>
                     </View>
@@ -203,7 +204,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        paddingBottom: 24,
+        paddingBottom: 80, // Add extra padding for bottom nav
     },
     headerContainer: {
         marginBottom: 30,

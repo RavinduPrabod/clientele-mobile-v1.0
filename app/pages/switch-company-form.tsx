@@ -125,7 +125,7 @@ export default function SwitchCompany() {
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: true })} />
+      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
       <View className="flex-1 bg-background" style={{ marginTop: 100 }}>
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.container}>

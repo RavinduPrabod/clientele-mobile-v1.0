@@ -3,9 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
-import { Pressable, ScrollView, StyleSheet, View, FlatList, Image, Alert, ToastAndroid } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, FlatList, Image, Alert, ToastAndroid, LayoutChangeEvent } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { TransactionDetails, TransactionsSavingDto } from '@/app/Types/user.types';
+import { TempCart, TransactionDetails, TransactionsSavingDto } from '@/app/Types/user.types';
 import TransactionService from '@/app/services/TransactionService';
 import { NativeSelectScrollView, Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TriggerRef } from '@rn-primitives/select';
@@ -35,6 +35,7 @@ export default function PurchaseForm() {
 
   // Cart state - Fixed: Use TransactionDetails type
   const [cart, setCart] = React.useState<TransactionDetails[]>([]);
+  const [tempCart, setTempCart] = React.useState<TempCart[]>([]);
   const [showCart, setShowCart] = React.useState(false);
   const [selectedCartItem, setSelectedCartItem] = React.useState<any | null>(null);
 
@@ -56,6 +57,7 @@ export default function PurchaseForm() {
   const scrollRef = React.useRef<ScrollView>(null);
   const productTriggerRef = React.useRef<TriggerRef>(null);
   const categoryTriggerRef = React.useRef<TriggerRef>(null);
+  const [selectWidth, setSelectWidth] = React.useState(0);
 
   const contentInsets = {
     top: 20,
@@ -172,6 +174,19 @@ export default function PurchaseForm() {
         CreatedWorkStation: 'Mobile'
       };
 
+      const tempCartDetails: TempCart = {
+        seqNo: cart.length + 1,
+        productName: selectedProduct,
+        CategoryName: selectedCategory,
+        GrossQty: parseFloat(gross),
+        BaleQty: parseFloat(bale) || 0,
+        WastageQty: parseFloat(wastage) || 0,
+        NetQty: netKg,
+        UnitPrice: parseFloat(price),
+        NetValue: totalValue
+      }
+
+      setTempCart(prev => [...prev, tempCartDetails]);
       setCart(prev => [...prev, transactionDetail]);
       ToastAndroid.show('Product added to cart!', ToastAndroid.SHORT);
 
@@ -230,7 +245,10 @@ export default function PurchaseForm() {
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light', { showProfileButton: false })} />
+      <Stack.Screen
+        options={getScreenOptions(colorScheme ?? 'light', {
+          showThemeToggle: false
+        })} />
       <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
         <View style={styles.container}>
           {/* Header */}
@@ -259,16 +277,16 @@ export default function PurchaseForm() {
             <View className="bg-card p-3 border-b border-border">
               <Text className="text-foreground text-lg font-bold mb-3 text-center">🛒 Cart Summary</Text>
               <FlatList
-                data={cart}
-                keyExtractor={(item) => item.SerialNo.toString()}
+                data={tempCart}
+                keyExtractor={(item) => item.seqNo.toString()}
                 renderItem={({ item }) => (
                   <Pressable
                     className="bg-muted rounded-xl p-3 mb-2.5 border border-border"
                     onPress={() => setSelectedCartItem(item)}
                   >
                     <View style={styles.cartItemHeader}>
-                      <Text className="text-foreground font-bold text-base">{item.ProductId}</Text>
-                      <Text className="text-muted-foreground text-sm">{item.CategoryCode}</Text>
+                      <Text className="text-foreground font-bold text-base">{item.productName}</Text>
+                      <Text className="text-muted-foreground text-sm">{item.CategoryName}</Text>
                     </View>
                     <View style={styles.cartItemRow}>
                       <Text className="text-muted-foreground text-xs">Net: {item.NetQty.toFixed(2)} Kg</Text>
@@ -277,7 +295,7 @@ export default function PurchaseForm() {
                       </Text>
                     </View>
                     <Pressable
-                      onPress={() => handleRemoveProduct(item.SerialNo)}
+                      onPress={() => handleRemoveProduct(item.seqNo)}
                       className="self-end bg-destructive/10 rounded-md py-1 px-2 mt-1.5"
                     >
                       <Text className="text-destructive font-semibold text-xs">Remove</Text>
@@ -307,100 +325,114 @@ export default function PurchaseForm() {
               {/* Product Select */}
               <View style={styles.inputGroup}>
                 <Text className="text-muted-foreground text-sm mb-2 font-medium">Product</Text>
-                <Select
-                  value={selectedProductCode ? { value: selectedProductCode, label: selectedProduct || '' } : undefined}
-                  onValueChange={(option) => {
-                    if (option?.value) {
-                      handleProductSelect(option.value);
-                    }
+                <View
+                  onLayout={(event: LayoutChangeEvent) => {
+                    const { width } = event.nativeEvent.layout;
+                    setSelectWidth(width);
                   }}
                 >
-                  <SelectTrigger ref={productTriggerRef}>
-                    <SelectValue placeholder="Select Product" />
-                  </SelectTrigger>
-                  <SelectContent insets={contentInsets}>
-                    <NativeSelectScrollView
-                      showsVerticalScrollIndicator={true}
-                      scrollEnabled={true}
-                      bounces={true}
-                      style={{ maxHeight: 300 }}
-                      contentContainerStyle={{ paddingVertical: 4 }}
-                    >
-                      <SelectGroup>
-                        <SelectLabel>Products</SelectLabel>
-                        {products.length > 1 ? (
-                          products.slice(1).map((product) => (
-                            <SelectItem
-                              key={product.dataValueField}
-                              label={product.dataTextField}
-                              value={product.dataValueField}
-                            >
-                              {product.dataTextField}
+                  <Select
+                    value={selectedProductCode ? { value: selectedProductCode, label: selectedProduct || '' } : undefined}
+                    onValueChange={(option) => {
+                      if (option?.value) {
+                        handleProductSelect(option.value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger ref={productTriggerRef}>
+                      <SelectValue placeholder="Select Product" />
+                    </SelectTrigger>
+                    <SelectContent insets={contentInsets}>
+                      <NativeSelectScrollView
+                        showsVerticalScrollIndicator={true}
+                        scrollEnabled={true}
+                        bounces={true}
+                        style={{ maxHeight: 300 }}
+                        contentContainerStyle={{ paddingVertical: 4 }}
+                      >
+                        <SelectGroup style={{ width: selectWidth || '100%' }}>
+                          <SelectLabel>Products</SelectLabel>
+                          {products.length > 1 ? (
+                            products.slice(1).map((product) => (
+                              <SelectItem
+                                key={product.dataValueField}
+                                label={product.dataTextField}
+                                value={product.dataValueField}
+                              >
+                                {product.dataTextField}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem key="no-data" label="No products available" value="no-data" disabled>
+                              No products available
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem key="no-data" label="No products available" value="no-data" disabled>
-                            No products available
-                          </SelectItem>
-                        )}
-                      </SelectGroup>
-                    </NativeSelectScrollView>
-                  </SelectContent>
-                </Select>
+                          )}
+                        </SelectGroup>
+                      </NativeSelectScrollView>
+                    </SelectContent>
+                  </Select>
+                </View>
               </View>
 
               {/* Category Select */}
               <View style={styles.inputGroup}>
                 <Text className="text-muted-foreground text-sm mb-2 font-medium">Category</Text>
-                <Select
-                  value={selectedCategoryCode ? { value: selectedCategoryCode, label: selectedCategory || '' } : undefined}
-                  onValueChange={(option) => {
-                    if (option?.value) {
-                      handleCategorySelect(option.value);
-                    }
+                <View
+                  onLayout={(event: LayoutChangeEvent) => {
+                    const { width } = event.nativeEvent.layout;
+                    setSelectWidth(width);
                   }}
-                  disabled={isCategoryLoading || categories.length === 0}
                 >
-                  <SelectTrigger ref={categoryTriggerRef}>
-                    <SelectValue
-                      placeholder={
-                        isCategoryLoading
-                          ? "Loading categories..."
-                          : categories.length === 0
-                            ? "Select a product first"
-                            : "Select Category"
+                  <Select
+                    value={selectedCategoryCode ? { value: selectedCategoryCode, label: selectedCategory || '' } : undefined}
+                    onValueChange={(option) => {
+                      if (option?.value) {
+                        handleCategorySelect(option.value);
                       }
-                    />
-                  </SelectTrigger>
-                  <SelectContent insets={contentInsets}>
-                    <NativeSelectScrollView
-                      showsVerticalScrollIndicator={true}
-                      scrollEnabled={true}
-                      bounces={true}
-                      style={{ maxHeight: 300 }}
-                      contentContainerStyle={{ paddingVertical: 4 }}
-                    >
-                      <SelectGroup>
-                        <SelectLabel>Categories</SelectLabel>
-                        {categories.length > 1 ? (
-                          categories.slice(1).map((category) => (
-                            <SelectItem
-                              key={category.dataValueField}
-                              label={category.dataTextField}
-                              value={category.dataValueField}
-                            >
-                              {category.dataTextField}
+                    }}
+                    disabled={isCategoryLoading || categories.length === 0}
+                  >
+                    <SelectTrigger ref={categoryTriggerRef}>
+                      <SelectValue
+                        placeholder={
+                          isCategoryLoading
+                            ? "Loading categories..."
+                            : categories.length === 0
+                              ? "Select a product first"
+                              : "Select Category"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent insets={contentInsets}>
+                      <NativeSelectScrollView
+                        showsVerticalScrollIndicator={true}
+                        scrollEnabled={true}
+                        bounces={true}
+                        style={{ maxHeight: 300 }}
+                        contentContainerStyle={{ paddingVertical: 4 }}
+                      >
+                        <SelectGroup style={{ width: selectWidth || '100%' }}>
+                          <SelectLabel>Categories</SelectLabel>
+                          {categories.length > 1 ? (
+                            categories.slice(1).map((category) => (
+                              <SelectItem
+                                key={category.dataValueField}
+                                label={category.dataTextField}
+                                value={category.dataValueField}
+                              >
+                                {category.dataTextField}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem key="no-data" label="No categories available" value="no-data" disabled>
+                              No categories available
                             </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem key="no-data" label="No categories available" value="no-data" disabled>
-                            No categories available
-                          </SelectItem>
-                        )}
-                      </SelectGroup>
-                    </NativeSelectScrollView>
-                  </SelectContent>
-                </Select>
+                          )}
+                        </SelectGroup>
+                      </NativeSelectScrollView>
+                    </SelectContent>
+                  </Select>
+                </View>
               </View>
 
               {/* Input fields */}
@@ -459,7 +491,7 @@ export default function PurchaseForm() {
                   <Text className="text-muted-foreground text-sm font-medium">Rs.</Text>
                 </View>
               </View>
-              
+
             </View>
 
             {/* Summary Section */}
@@ -494,11 +526,11 @@ export default function PurchaseForm() {
                 <Text className="text-foreground text-xl font-bold mb-3 text-center">Product Details</Text>
                 <View style={styles.detailRow}>
                   <Text className="text-muted-foreground font-semibold">Product:</Text>
-                  <Text className="text-foreground">{selectedCartItem.ProductId}</Text>
+                  <Text className="text-foreground">{selectedCartItem.productName}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text className="text-muted-foreground font-semibold">Category:</Text>
-                  <Text className="text-foreground">{selectedCartItem.CategoryCode}</Text>
+                  <Text className="text-foreground">{selectedCartItem.CategoryName}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text className="text-muted-foreground font-semibold">Gross:</Text>
