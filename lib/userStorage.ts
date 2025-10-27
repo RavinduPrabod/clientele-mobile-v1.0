@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StockSummaryData, UserBranch } from '../app/Types/user.types'; 
+import { RegisteredDevice, StockSummaryData, UserBranch } from '../app/Types/user.types';
 
 const STORAGE_KEYS = {
   USER_BRANCHES: '@user_branches',
   SELECTED_BRANCH: '@selected_branch',
   COMPANY_NAME: '@company_name',
   TOKEN_STRING: '@token_string',
-  STOCK_SUMMARY:"@Stock_Summary"
+  STOCK_SUMMARY: "@Stock_Summary",
+  REGISTERED_DEVICE: "@Registered_Device"
 };
 
 export class UserStorage {
@@ -15,7 +16,7 @@ export class UserStorage {
   static async saveUserBranches(branches: UserBranch[]): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER_BRANCHES, JSON.stringify(branches));
-      
+
       // Save company name from first branch
       if (branches.length > 0) {
         await AsyncStorage.setItem(STORAGE_KEYS.COMPANY_NAME, branches[0].companyName);
@@ -96,7 +97,7 @@ export class UserStorage {
     }
   }
 
-    // Get Stock Summary
+  // Get Stock Summary
   static async getStockSummary(): Promise<StockSummaryData[]> {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.STOCK_SUMMARY);
@@ -106,5 +107,27 @@ export class UserStorage {
       return [];
     }
   }
-  
+
+  static async saveRegisteredDevices(obj: RegisteredDevice[]): Promise<void> {
+    try {
+      // Save company name from first branch
+      if (obj.length > 0) {
+        await AsyncStorage.setItem(STORAGE_KEYS.REGISTERED_DEVICE, JSON.stringify(obj));
+      }
+    } catch (error) {
+      console.error('Error saving registered device:', error);
+      throw error;
+    }
+  }
+
+  static async getRegisteredDevices(): Promise<RegisteredDevice[]> {
+    try {
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.REGISTERED_DEVICE);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting registered device:', error);
+      return [];
+    }
+  }
+
 }

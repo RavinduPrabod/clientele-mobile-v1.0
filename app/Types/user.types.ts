@@ -163,9 +163,9 @@ export interface TransactionsSavingDto {
   CreatedWorkStation?: string;
 }
 
-export interface ComboDTO{
-  DataTextField : string;
-  DataValueField : string;
+export interface ComboDTO {
+  DataTextField: string;
+  DataValueField: string;
 }
 
 export interface LoginResponse {
@@ -175,7 +175,7 @@ export interface LoginResponse {
   statusCode: number;
 }
 
-export interface TempCart{
+export interface TempCart {
   seqNo: number;
   productName: string;
   CategoryName?: string;
@@ -185,4 +185,13 @@ export interface TempCart{
   NetQty: number;
   UnitPrice: number;
   NetValue: number;
+}
+
+export interface RegisteredDevice {
+  Id: number,
+  UserId: string,
+  Identifier: string,
+  DeviceType: number,
+  RequestDateTime: string,
+  Status: number
 }

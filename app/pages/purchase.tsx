@@ -247,31 +247,30 @@ export default function PurchaseForm() {
     <>
       <Stack.Screen
         options={getScreenOptions(colorScheme ?? 'light', {
+          pageTitle: 'Purchase',
+          hideBackButton: false,
           showThemeToggle: false
-        })} />
-      <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
+        })}
+      />
+      <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
         <View style={styles.container}>
-          {/* Header */}
-          <View className="flex-row justify-between items-center px-4 pt-12 pb-4 bg-card border-b border-border">
-            <Text className="text-foreground text-2xl font-bold">Purchase</Text>
-            {/* Cart Icon with Badge */}
-            <Pressable onPress={() => {
-              if (cart.length === 0) {
-                Alert.alert('Error', 'Your cart is empty. Please add at least one product.');
-                return;
-              }
-              setShowCart(!showCart);
-            }}
-              style={styles.cartButton}>
-              <Text style={styles.cartIcon}><Image source={require('assets/images/add-to-cart.png')} /></Text>
-              {cart.length > 0 && (
-                <View className="absolute top-2 -right-2 bg-destructive rounded-full px-1.5 py-0.5">
-                  <Text className="text-destructive-foreground text-xs font-bold">{cart.length}</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
 
+          {/* Cart Icon with Badge */}
+          <Pressable onPress={() => {
+            if (cart.length === 0) {
+              Alert.alert('Error', 'Your cart is empty. Please add at least one product.');
+              return;
+            }
+            setShowCart(!showCart);
+          }}
+            style={styles.cartButton}>
+            <Text style={styles.cartIcon}><Image source={require('assets/images/add-to-cart.png')} /></Text>
+            {cart.length > 0 && (
+              <View className="absolute top-2 -right-2 bg-destructive rounded-full px-1.5 py-0.5">
+                <Text className="text-destructive-foreground text-xs font-bold">{cart.length}</Text>
+              </View>
+            )}
+          </Pressable>
           {/* Cart Dropdown - FIXED */}
           {showCart && (
             <View className="bg-card p-3 border-b border-border">
@@ -568,6 +567,7 @@ export default function PurchaseForm() {
               </View>
             </View>
           )}
+
         </View>
       </View>
     </>
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   cartButton: {
     position: 'relative',
     marginRight: 12,
-    paddingLeft: 150
+    paddingLeft: 350
   },
   cartIcon: {
     fontSize: 60

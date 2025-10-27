@@ -5,6 +5,7 @@ import { Auth } from '../../lib/ApiDoc';
 import { UserStorage } from '../../lib/userStorage';
 import { LoginResponse } from '../Types/user.types';
 import { router } from 'expo-router';
+import { AxiosError } from 'axios';
 
 
 class AuthService { 
@@ -171,6 +172,68 @@ class AuthService {
     }
   }
 
+   async postNewUser(userCredentials: string) {
+        try {
+            // Send the request body as JSON
+            const response = await axios.post(this.baseUri.ValidateAndCreateNewUser, userCredentials);
+
+            if (response.status === 200) {
+                return {
+                    success: true,
+                    data: response.data,
+                    statusCode: response.status,
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'Unexpected response from server',
+                    statusCode: response.status,
+                };
+            }
+        } catch (error: unknown) {
+            const err = error as AxiosError;
+
+            console.error('Create NewUser error:', err.message);
+            console.error('Error code:', err.code);
+            console.error('Error response:', err.response?.data);
+
+            // Handle HTTP errors
+            if (err.response) {
+                const status = err.response.status;
+                return {
+                    success: false,
+                    error: (err.response.data as any)?.message || 'Server returned an error',
+                    statusCode: status,
+                };
+            }
+
+            // Handle network errors
+            if (err.code === 'ENOTFOUND') {
+                return {
+                    success: false,
+                    error: 'Server address not found. Check your network connection.',
+                    statusCode: 503,
+                };
+            }
+
+            // Handle timeout errors
+            if (err.message?.includes('timeout')) {
+                return {
+                    success: false,
+                    error: 'Request timeout. Server is taking too long to respond.',
+                    statusCode: 504,
+                };
+            }
+
+            // Fallback
+            return {
+                success: false,
+                error: err.message || 'An unexpected error occurred',
+                statusCode: 500,
+            };
+        }
+    }
+
    async logout(): Promise<void> {
     try {
       await TokenStorage.clearTokens(await TokenStorage.getAccessToken())
@@ -179,6 +242,8 @@ class AuthService {
       console.error('Logout error:', error);
     }
   }
+
+
 }
 
 export default new AuthService();

@@ -77,18 +77,18 @@ export default function Dashboard() {
 
     return (
         <>
-            <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
+            <Stack.Screen
+                options={getScreenOptions(colorScheme ?? 'light', {
+                    pageTitle: 'Dashboard',
+                    hideBackButton: true,
+                    showThemeToggle: true
+                })}
+            />
             <View className="flex-1 bg-background" style={{ marginTop: 100 }}>
                 <ScrollView
                     style={styles.scrollView}
                     contentContainerStyle={styles.scrollContent}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {/* Header */}
-                    <View style={styles.headerContainer}>
-                        <Text className="text-foreground text-3xl font-bold mb-1">Dashboard</Text>
-                    </View>
-
+                    showsVerticalScrollIndicator={false}>
                     <View style={styles.contentContainer}>
                         {/* Company Info Card */}
                         <View className="bg-card border border-border rounded-2xl p-5 mb-6 shadow-sm">
@@ -211,6 +211,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     contentContainer: {
+        paddingTop: 50,
         paddingHorizontal: 20,
     },
     infoRow: {
@@ -248,7 +249,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     menuGrid: {
-        justifyContent:'center',
+        justifyContent: 'center',
         flexDirection: 'row',
         flexWrap: 'wrap',
         gap: 45,

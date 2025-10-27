@@ -5,10 +5,10 @@ import { Text } from '@/components/ui/text';
 import * as React from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, type TextInput, View, ActivityIndicator } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import AuthService from '../services/AuthService'; 
+import AuthService from '../services/AuthService';
 import { UserStorage } from '../../lib/userStorage';
-import { getScreenOptions } from '@/components/shared/headerOption';
 import { useColorScheme } from 'nativewind';
+import { getScreenOptions } from '@/components/shared/headerOption';
 
 export default function SignInForm() {
   const [userId, setUserId] = React.useState('admin');
@@ -52,7 +52,7 @@ export default function SignInForm() {
             console.warn('No data in response:', response);
           }
         }
-        
+
       } else {
         Alert.alert('Login Failed', response.error || 'Invalid credentials');
       }
@@ -74,9 +74,11 @@ export default function SignInForm() {
 
   return (
     <>
-      <Stack.Screen 
-        options={getScreenOptions(colorScheme ?? 'light', { 
-          showThemeToggle: true 
+      <Stack.Screen
+        options={getScreenOptions(colorScheme ?? 'light', {
+          pageTitle: '',
+          hideBackButton: true,
+          showThemeToggle: true
         })}
       />
       <ScrollView contentContainerStyle={styles.scrollContainer} className="bg-background">
@@ -98,7 +100,7 @@ export default function SignInForm() {
                 Login to Your Account
               </Text>
             </View>
-            
+
             {/* Form Section */}
             <View style={styles.formSection}>
               <View style={styles.inputGroup}>

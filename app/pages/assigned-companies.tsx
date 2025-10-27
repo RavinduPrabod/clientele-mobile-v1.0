@@ -125,7 +125,7 @@ export default function AssignedCompanies() {
       // const companiesResponse = await CompanyService.getRegisteredCompanies();
       // const usersResponse = await UserService.getGuestUsers();
       // const assignmentsResponse = await CompanyService.getUserAssignments();
-      
+
       setCompanies(mockCompanies);
       setUsers(mockUsers);
       setAssignments(mockAssignments);
@@ -154,45 +154,45 @@ export default function AssignedCompanies() {
         // Unassign company - Real-time save
         // TODO: Replace with your API call
         // await CompanyService.unassignCompany(userId, companyId);
-        
+
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         setAssignments(prevAssignments =>
           prevAssignments.map(assignment =>
             assignment.userId === userId
               ? {
-                  ...assignment,
-                  companyIds: assignment.companyIds.filter(id => id !== companyId),
-                }
+                ...assignment,
+                companyIds: assignment.companyIds.filter(id => id !== companyId),
+              }
               : assignment
           )
         );
-        
+
         // Success feedback can be subtle or removed for better UX
         // Alert.alert('Success', 'Company unassigned');
       } else {
         // Assign company - Real-time save
         // TODO: Replace with your API call
         // await CompanyService.assignCompany(userId, companyId);
-        
+
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         setAssignments(prevAssignments => {
           const existingAssignment = prevAssignments.find(a => a.userId === userId);
           if (existingAssignment) {
             return prevAssignments.map(assignment =>
               assignment.userId === userId
                 ? {
-                    ...assignment,
-                    companyIds: [...assignment.companyIds, companyId],
-                  }
+                  ...assignment,
+                  companyIds: [...assignment.companyIds, companyId],
+                }
                 : assignment
             );
           } else {
             return [...prevAssignments, { userId, companyIds: [companyId] }];
           }
         });
-        
+
         // Success feedback can be subtle or removed for better UX
         // Alert.alert('Success', 'Company assigned');
       }
@@ -224,18 +224,20 @@ export default function AssignedCompanies() {
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
+      <Stack.Screen
+        options={getScreenOptions(colorScheme ?? 'light', {
+          pageTitle: 'Company Assignments',
+          hideBackButton: false,
+          showThemeToggle: false
+        })}
+      />
       <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           {/* Header */}
           <View style={styles.headerContainer}>
-            <Text className="text-foreground text-3xl font-bold mb-2">
-              Company Assignments
-            </Text>
             <Text className="text-muted-foreground text-sm mb-4">
               Assign companies to users
             </Text>

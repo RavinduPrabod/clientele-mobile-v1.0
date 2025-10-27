@@ -12,7 +12,6 @@ import AuthService from '../services/AuthService';
 import { UserStorage } from '@/lib/userStorage';
 
 export default function SignUpForm() {
-  const userNameInputRef = React.useRef<TextInput | null>(null);
   const passwordInputRef = React.useRef<TextInput>(null);
   const confirmPasswordInputRef = React.useRef<TextInput>(null);
   const { colorScheme } = useColorScheme();
@@ -21,64 +20,80 @@ export default function SignUpForm() {
   const [userId, setUserId] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmpassword, setConfirmPassword] = React.useState('');
-  const uniqueId = DeviceInfo.getUniqueId();
+  const [uniqueId, setUniqueId] = React.useState('');
+
+  // Get device unique ID when component mounts
+  React.useEffect(() => {
+    const getDeviceId = async () => {
+      const id = await DeviceInfo.getUniqueId();
+      setUniqueId(id);
+    };
+    getDeviceId();
+  }, []);
 
   function onUserNameSubmitEditing() {
-    userNameInputRef.current?.focus();
-  }
-
-  function onPasswordSubmitEditing() {
     passwordInputRef.current?.focus();
   }
 
-  function onConfirmPasswordSubmitEditing() {
+  function onPasswordSubmitEditing() {
     confirmPasswordInputRef.current?.focus();
   }
 
-  function onSubmit() {
-   handleSignUp();
-  };
-
-  function onSubmitSignIn() {
-    router.replace("/");
+  function onSubmitSignUp() {
+    handleSignUp();
   }
 
+  function onSubmitSignIn() {
+    router.replace('/');
+  }
+
+
   const handleSignUp = async () => {
- if (!userId.trim() || !password.trim() || !confirmpassword.trim()) {
-      Alert.alert('Error', 'Please enter User ID, Password and Confirm Password');
+    // Validation
+    if (!userId.trim() || !password.trim() || !confirmpassword.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (password !== confirmpassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters');
       return;
     }
 
     try {
       setLoading(true);
 
-      // Call the login API
-      const response = await AuthService.getLoggedUser(userId, password);
+      const userCredentials = userId + "$" + password + "$" + uniqueId;
+      console.log("uniqueId", uniqueId);
 
-      if (response.success && response.data) {
-        const userBranches = await UserStorage.getUserBranches();
+      // Call the registration API
+      const response = await AuthService.postNewUser(userCredentials);
 
-        if (Array.isArray(userBranches) && userBranches.length > 1) {
-          // Navigate to Switch Company page
-          router.push('/pages/switch-company-form');
-        } else {
-          await UserStorage.saveSelectedBranch(userBranches[0]);
-          const UserCode = userBranches[0].userId + "$" + userBranches[0].companyId
-          const response = await AuthService.getTokenString(UserCode);
-
-          if (response?.data) {
-            // Navigate to Dashboard
-            router.push('/pages/Dashboard/Dashbord');
-          } else {
-            console.warn('No data in response:', response);
-          }
-        }
-
+      if (response.success) {
+        // Show success message with approval waiting
+        Alert.alert(
+          '✅ Registration Successful',
+          'Your account has been created successfully!\n\nPlease wait for admin approval before you can sign in.',
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate to Sign In page
+                router.replace('/');
+              },
+            },
+          ]
+        );
       } else {
-        Alert.alert('Login Failed', response.error || 'Invalid credentials');
+        Alert.alert('Registration Failed', response.error || 'Unable to create account. Please try again.');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('Registration error:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -87,7 +102,13 @@ export default function SignUpForm() {
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
+       <Stack.Screen
+              options={getScreenOptions(colorScheme ?? 'light', {
+                pageTitle: '',
+                hideBackButton: true,
+                showThemeToggle: true
+              })}
+            />
       <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
         <ScrollView contentContainerStyle={styles.scrollContainer} className="bg-background">
           <View style={styles.container}>
@@ -155,7 +176,6 @@ export default function SignUpForm() {
                     placeholder="Enter Your Confirm Password"
                     secureTextEntry
                     returnKeyType="send"
-                    onSubmitEditing={onConfirmPasswordSubmitEditing}
                     onChangeText={(text) => {
                       // Remove any $ symbols from input
                       const cleanedText = text.replace(/\$/g, '');
@@ -167,7 +187,7 @@ export default function SignUpForm() {
 
                 <Button
                   className={`w-full bg-primary ${loading ? 'opacity-50' : ''}`}
-                  onPress={onSubmit}
+                  onPress={onSubmitSignUp}
                   disabled={loading}
                 >
                   {loading ? (

@@ -1,134 +1,100 @@
-// app/pages/device-registration.tsx
-import { Text } from '@/components/ui/text';
-import * as React from 'react';
-import { ScrollView, StyleSheet, View, Pressable, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+} from 'react-native';
+import DeviceService from '../services/DeviceService';
 import { Stack } from 'expo-router';
-import { useColorScheme } from 'nativewind';
 import { getScreenOptions } from '@/components/shared/headerOption';
+import { useColorScheme } from 'nativewind';
+import { RegisteredDevice } from '../Types/user.types';
+import { Card } from '@/components/ui/card';
 
-// Type definition for device
-type Device = {
-  id: string;
-  userId: string;
-  deviceType: string;
-  macAddress: string;
-  requestDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-};
-
-// Mock data - replace with your API call
-const mockDevices: Device[] = [
-  {
-    id: '1',
-    userId: 'USR001',
-    deviceType: 'Android Phone',
-    macAddress: '00:1B:44:11:3A:B7',
-    requestDate: '2025-01-15',
-    status: 'pending',
-  },
-  {
-    id: '2',
-    userId: 'USR002',
-    deviceType: 'iPhone',
-    macAddress: 'A4:83:E7:2F:5C:1D',
-    requestDate: '2025-01-14',
-    status: 'pending',
-  },
-  {
-    id: '3',
-    userId: 'USR003',
-    deviceType: 'Android Tablet',
-    macAddress: '6C:AD:F8:9B:2E:4A',
-    requestDate: '2025-01-13',
-    status: 'pending',
-  },{
-    id: '4',
-    userId: 'USR004',
-    deviceType: 'PC',
-    macAddress: '6C:AD:F8:9B:2E:4A',
-    requestDate: '2025-01-13',
-    status: 'pending',
-  },
-];
-
-export default function DeviceRegistration() {
+const DeviceRegistrationsPage = () => {
+  const [devices, setDevices] = useState<RegisteredDevice[]>([]);
+  const [loading, setLoading] = useState(true);
   const { colorScheme } = useColorScheme();
-  const [devices, setDevices] = React.useState<Device[]>(mockDevices);
-  const [loading, setLoading] = React.useState<string | null>(null);
 
-  // Load devices from API
-  React.useEffect(() => {
-    loadDevices();
+  useEffect(() => {
+    fetchDevices();
   }, []);
 
-  const loadDevices = async () => {
+  const fetchDevices = async () => {
     try {
-      // TODO: Replace with your API call
-      // const response = await DeviceService.getPendingDevices();
-      // setDevices(response.data);
-      
-      // For now, using mock data
-      setDevices(mockDevices);
-    } catch (error) {
-      console.error('Error loading devices:', error);
-      Alert.alert('Error', 'Failed to load devices');
-    }
-  };
+      setLoading(true);
+      // Replace with your actual API endpoint
+      const response = await DeviceService.getRegisteredDevices(0);
 
-  const handleApprove = async (deviceId: string) => {
-    setLoading(deviceId);
-    try {
-      // TODO: Replace with your API call
-      // await DeviceService.approveDevice(deviceId);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setDevices(prevDevices =>
-        prevDevices.map(device =>
-          device.id === deviceId
-            ? { ...device, status: 'approved' as const }
-            : device
-        )
-      );
-      
-      Alert.alert('Success', 'Device approved successfully');
+      // Map API response to match interface
+      const mappedData = response.data.map((item: any) => ({
+        Id: item.id,
+        UserId: item.userId,
+        Identifier: item.identifier,
+        DeviceType: item.deviceType,
+        RequestDateTime: item.requestDateTime,
+        Status: item.status,
+      }));
+
+      setDevices(mappedData);
     } catch (error) {
-      console.error('Error approving device:', error);
-      Alert.alert('Error', 'Failed to approve device');
+      Alert.alert('Error', 'Failed to fetch devices');
+      console.error(error);
     } finally {
-      setLoading(null);
+      setLoading(false);
     }
   };
 
-  const handleRemove = async (deviceId: string) => {
+  const approveDevice = async (deviceId: number) => {
+    try {
+
+      // Replace with your actual API endpoint
+      const response = '';
+
+      if (response.ok) {
+        setDevices((prevDevices) =>
+          prevDevices.map((device) =>
+            device.Id === deviceId ? { ...device, Status: 2 } : device
+          )
+        );
+        Alert.alert('Success', 'Device approved successfully');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to approve device');
+      console.error(error);
+    }
+  };
+
+  const removeDevice = async (deviceId: number) => {
     Alert.alert(
-      'Confirm Removal',
-      'Are you sure you want to remove this device registration?',
+      'Confirm Delete',
+      'Are you sure you want to remove this device?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Remove',
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            setLoading(deviceId);
             try {
-              // TODO: Replace with your API call
-              // await DeviceService.removeDevice(deviceId);
-              
-              // Simulate API call
-              await new Promise(resolve => setTimeout(resolve, 500));
-              
-              setDevices(prevDevices =>
-                prevDevices.filter(device => device.id !== deviceId)
-              );
-              
-              Alert.alert('Success', 'Device removed successfully');
+              // Replace with your actual API endpoint
+              const response = await fetch(`YOUR_API_ENDPOINT/${deviceId}`, {
+                method: 'DELETE',
+              });
+
+              if (response.ok) {
+                setDevices((prevDevices) =>
+                  prevDevices.filter((device) => device.Id !== deviceId)
+                );
+                Alert.alert('Success', 'Device removed successfully');
+              }
             } catch (error) {
-              console.error('Error removing device:', error);
               Alert.alert('Error', 'Failed to remove device');
-            } finally {
-              setLoading(null);
+              console.error(error);
             }
           },
         },
@@ -136,256 +102,234 @@ export default function DeviceRegistration() {
     );
   };
 
-  const getDeviceIcon = (deviceType: string) => {
-    if (deviceType.toLowerCase().includes('iphone')) return '📱';
-    if (deviceType.toLowerCase().includes('android')) return '📱';
-    if (deviceType.toLowerCase().includes('tablet')) return '📋';
-    return '📱';
+  const getDeviceTypeLabel = (type: number) => {
+    const types: { [key: number]: string } = {
+      1: 'Android',
+      2: 'iOS',
+      3: 'Web',
+    };
+    return types[type] || 'Unknown';
   };
 
-  return (
-    <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
-      <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.headerContainer}>
-            <Text className="text-foreground text-3xl font-bold mb-2">
-              Device Registration
-            </Text>
-            <Text className="text-muted-foreground text-sm">
-              Approve or remove pending device registrations
-            </Text>
-          </View>
+  const getStatusLabel = (status: number) => {
+    const statuses: { [key: number]: string } = {
+      1: 'Approved',
+      2: 'Pending',
+      3: 'Rejected',
+    };
+    return statuses[status] || 'Unknown';
+  };
 
-          {/* Devices List */}
-          <View style={styles.contentContainer}>
-            {devices.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyIcon}>📱</Text>
-                <Text className="text-muted-foreground text-base text-center mt-4">
-                  No pending device registrations
-                </Text>
-              </View>
-            ) : (
-              devices.map((device) => (
-                <View
-                  key={device.id}
-                  className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-sm"
-                >
-                  {/* Device Header */}
-                  <View style={styles.deviceHeader}>
-                    <View className="w-12 h-12 rounded-full bg-muted justify-center items-center">
-                      <Text style={styles.deviceIcon}>
-                        {getDeviceIcon(device.deviceType)}
-                      </Text>
-                    </View>
-                    <View style={styles.deviceHeaderText}>
-                      <Text className="text-foreground text-lg font-bold">
-                        {device.deviceType}
-                      </Text>
-                      <Text className="text-muted-foreground text-xs">
-                        Requested on {device.requestDate}
-                      </Text>
-                    </View>
-                  </View>
+  const renderDevice = ({ item }: { item: RegisteredDevice }) => {
+    const isApproved = item.Status === 1;
 
-                  {/* Device Details */}
-                  <View style={styles.detailsContainer}>
-                    <View style={styles.detailRow}>
-                      <View style={styles.detailItem}>
-                        <Text className="text-muted-foreground text-xs font-medium mb-1">
-                          User ID
-                        </Text>
-                        <Text className="text-foreground text-sm font-semibold">
-                          {device.userId}
-                        </Text>
-                      </View>
-                    </View>
+    return (
+      <>
 
-                    <View style={styles.detailRow}>
-                      <View style={styles.detailItem}>
-                        <Text className="text-muted-foreground text-xs font-medium mb-1">
-                          Device Type
-                        </Text>
-                        <Text className="text-foreground text-sm font-semibold">
-                          {device.deviceType}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.detailRow}>
-                      <View style={styles.detailItem}>
-                        <Text className="text-muted-foreground text-xs font-medium mb-1">
-                          MAC Address
-                        </Text>
-                        <Text className="text-foreground text-sm font-semibold font-mono">
-                          {device.macAddress}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  {device.status === 'pending' && (
-                    <View style={styles.actionButtons}>
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.button,
-                          styles.approveButton,
-                          pressed && styles.buttonPressed,
-                          loading === device.id && styles.buttonDisabled,
-                        ]}
-                        onPress={() => handleApprove(device.id)}
-                        disabled={loading === device.id}
-                      >
-                        <Text style={styles.approveButtonText}>
-                          {loading === device.id ? '⏳ Processing...' : '✓ Approve'}
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        style={({ pressed }) => [
-                          styles.button,
-                          styles.removeButton,
-                          pressed && styles.buttonPressed,
-                          loading === device.id && styles.buttonDisabled,
-                        ]}
-                        onPress={() => handleRemove(device.id)}
-                        disabled={loading === device.id}
-                      >
-                        <Text style={styles.removeButtonText}>
-                          {loading === device.id ? '⏳ Processing...' : '✕ Remove'}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  )}
-
-                  {/* Status Badge */}
-                  {device.status !== 'pending' && (
-                    <View style={styles.statusBadge}>
-                      <Text
-                        style={[
-                          styles.statusText,
-                          device.status === 'approved'
-                            ? styles.approvedStatus
-                            : styles.rejectedStatus,
-                        ]}
-                      >
-                        {device.status === 'approved' ? '✓ Approved' : '✕ Rejected'}
-                      </Text>
-                    </View>
-                  )}
+        <Stack.Screen
+          options={getScreenOptions(colorScheme ?? 'light', {
+            pageTitle: 'Device Registration',
+            hideBackButton: false,
+            showThemeToggle: true
+          })}
+        />
+        <View className="flex-1 bg-background mt-0" >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="bg-card border border-border rounded-2xl p-5 mb-0 shadow-sm">
+              <View>
+                <View style={styles.row}>
+                  <Text style={styles.label}>User ID:</Text>
+                  <Text style={styles.value}>{item.UserId}</Text>
                 </View>
-              ))
-            )}
-          </View>
-        </ScrollView>
+
+                <View style={styles.row}>
+                  <Text style={styles.label}>Unique Key:</Text>
+                  <Text style={styles.value}>{item.Identifier}</Text>
+                </View>
+
+                <View style={styles.row}>
+                  <Text style={styles.label}>Device Type:</Text>
+                  <Text style={styles.value}>
+                    ({getDeviceTypeLabel(item.DeviceType)})
+                  </Text>
+                </View>
+
+                <View style={styles.row}>
+                  <Text style={styles.label}>Request Date Time:</Text>
+                  <Text style={styles.value}>
+                    {new Date(item.RequestDateTime).toLocaleString()}
+                  </Text>
+                </View>
+
+                <View style={styles.row}>
+                  <Text style={styles.label}>Status:</Text>
+                  <Text style={[styles.value, styles.statusText]}>
+                    ({getStatusLabel(item.Status)})
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.buttonContainer}>
+                {!isApproved && (
+                  <TouchableOpacity
+                    style={[styles.button, styles.approveButton]}
+                    onPress={() => approveDevice(item.Id)}
+                  >
+                    <Text style={styles.buttonText}>Approve</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    styles.removeButton,
+                    !isApproved && styles.buttonDisabled,
+                  ]}
+                  onPress={() => removeDevice(item.Id)}
+                  disabled={!isApproved}
+                >
+                  <Text style={styles.buttonText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
-    </>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={devices}
+        renderItem={renderDevice}
+        keyExtractor={(item) => item.Id.toString()}
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No devices registered</Text>
+          </View>
+        }
+      />
+
+    </View>
   );
-}
+};
+
+
 
 const styles = StyleSheet.create({
+
+  container2: {
+    borderWidth: 1,           // The border thickness
+    borderColor: '#007AFF',   // Border color
+    borderStyle: 'dashed',    // Make it dashed
+    width: '100%',            // Full width of the parent
+    padding: 0,              // Optional padding inside
+    marginVertical: 10,
+    marginTop: 0     // Optional spacing outside
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 10,
   },
-  headerContainer: {
-    marginBottom: 24,
-    paddingHorizontal: 20,
+  container: {
+    flex: 1,
   },
-  contentContainer: {
-    paddingHorizontal: 20,
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  listContainer: {
+    padding: 16,
+    marginTop: 100,
+  },
+  card: {
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  infoContainer: {
+    marginBottom: 12,
+  },
+  row: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    width: 140,
+  },
+  value: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+  },
+  statusText: {
+    fontWeight: '500',
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  button: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  approveButton: {
+    backgroundColor: '#4CAF50',
+  },
+  removeButton: {
+    backgroundColor: '#F44336',
+  },
+  buttonDisabled: {
+    backgroundColor: '#BDBDBD',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 40,
   },
-  emptyIcon: {
-    fontSize: 64,
-    opacity: 0.3,
-  },
-  deviceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  deviceIcon: {
-    fontSize: 24,
-  },
-  deviceHeaderText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  detailsContainer: {
-    gap: 12,
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-  },
-  detailItem: {
-    flex: 1,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  approveButton: {
-    backgroundColor: '#10b981',
-  },
-  removeButton: {
-    backgroundColor: '#ef4444',
-  },
-  buttonPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.98 }],
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  approveButtonText: {
-    color: '#45c00cff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  removeButtonText: {
-    color: '#d21414ff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  statusBadge: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  approvedStatus: {
-    color: '#10b981',
-  },
-  rejectedStatus: {
-    color: '#ef4444',
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
   },
 });
+
+export default DeviceRegistrationsPage;

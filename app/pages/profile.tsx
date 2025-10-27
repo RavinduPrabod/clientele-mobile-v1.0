@@ -46,7 +46,7 @@ export default function ProfileScreen() {
     router.push("/pages/device-registration");
   }
 
-    function handleAssignedCompanies() {
+  function handleAssignedCompanies() {
     router.push("/pages/assigned-companies");
   }
 
@@ -57,17 +57,14 @@ export default function ProfileScreen() {
 
   return (
     <>
-      <Stack.Screen options={getScreenOptions(colorScheme ?? "light")} />
-      <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
+      <Stack.Screen
+        options={{
+          ...getScreenOptions(colorScheme ?? 'light', { hideBackButton: false, pageTitle: 'Profile' }),
+          gestureEnabled: false,
+        }}
+      />
+      <View className="flex-1 bg-background" style={{ marginTop: 120 }}>
         <View style={styles.container}>
-          {/* Header */}
-          <View className="flex-row items-center py-4 px-3 border-b border-border bg-card">
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <Text className="text-foreground text-2xl">←</Text>
-            </Pressable>
-            <Text className="text-foreground text-xl font-bold">👤 Profile</Text>
-          </View>
-
           <ScrollView contentContainerStyle={styles.content}>
             {/* User Info */}
             <View className="bg-card rounded-xl p-4 mb-5 border border-border">

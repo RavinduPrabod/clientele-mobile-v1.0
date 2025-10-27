@@ -18,16 +18,14 @@ export default function CartTab() {
 
   return (
     <>
-      <Stack.Screen 
-        options={getScreenOptions(colorScheme ?? 'light')} 
+      <Stack.Screen
+        options={{
+          ...getScreenOptions(colorScheme ?? 'light', { hideBackButton: false, pageTitle: 'Cart' }),
+          gestureEnabled: false,
+        }}
       />
       <View className="flex-1 bg-background" style={{ marginTop: 60 }}>
         <View style={styles.container}>
-          {/* Header */}
-          <View className="flex-row justify-between items-center px-4 pt-12 pb-4 bg-card border-b border-border">
-            <Text className="text-foreground text-2xl font-bold">Cart</Text>
-          </View>
-
           {cart.length === 0 ? (
             <View style={styles.emptyCart}>
               <Text className="text-muted-foreground text-lg">Your cart is empty</Text>
