@@ -1,5 +1,5 @@
 export class Auth {
-  GetLoggedUser = "/Auth/GetLoggedUser";
+  GetLoggedUser = "/Auth/ValidateUserLogin";
   ValidateUser = "/Auth/ValidateUser";
   getTokenString = "/Auth/GenerateTokenAsync"; 
   ValidateAndCreateNewUser = "/Auth/ValidateAndCreateNewUser";
@@ -16,5 +16,6 @@ export class Transactions{
 }
 
 export class DeviceRegistration{
-  LoadDeviceList = "/UserMaintenance/LoadDeviceList"
+  LoadDeviceList = "/UserMaintenance/LoadDeviceList";
+  UpdateRegisteredDevice = "/UserMaintenance/UpdateRegisteredDevice";
 }

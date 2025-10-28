@@ -9,6 +9,7 @@ import { getScreenOptions } from '@/components/shared/headerOption';
 export default function Screen() {
   const { colorScheme } = useColorScheme();
 
+
   return (
     <>
       <Stack.Screen options={getScreenOptions(colorScheme ?? 'light')} />
@@ -23,7 +24,6 @@ export default function Screen() {
         </ScrollView>
       </View>
     </>
-
   );
 }
 

@@ -47,7 +47,6 @@ export default function SignUpForm() {
     router.replace('/');
   }
 
-
   const handleSignUp = async () => {
     // Validation
     if (!userId.trim() || !password.trim() || !confirmpassword.trim()) {

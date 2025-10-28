@@ -9,6 +9,7 @@ import AuthService from '../services/AuthService';
 import { UserStorage } from '../../lib/userStorage';
 import { useColorScheme } from 'nativewind';
 import { getScreenOptions } from '@/components/shared/headerOption';
+import DeviceInfo from 'react-native-device-info';
 
 export default function SignInForm() {
   const [userId, setUserId] = React.useState('admin');
@@ -17,6 +18,16 @@ export default function SignInForm() {
   const { colorScheme } = useColorScheme();
   const passwordInputRef = React.useRef<TextInput>(null);
   const router = useRouter();
+  const [uniqueId, setUniqueId] = React.useState('');
+
+  // Get device unique ID when component mounts
+  React.useEffect(() => {
+    const getDeviceId = async () => {
+      const id = await DeviceInfo.getUniqueId();
+      setUniqueId(id);
+    };
+    getDeviceId();
+  }, []);
 
   function onEmailSubmitEditing() {
     passwordInputRef.current?.focus();
@@ -31,8 +42,19 @@ export default function SignInForm() {
     try {
       setLoading(true);
 
+      // Validate input
+      if (!userId || !password) {
+        Alert.alert('Error', 'User ID and password are required');
+        return;
+      }
+
+      const userCredentials = userId + "$" + password + "$" + uniqueId;
+      console.log("userCredentials", userCredentials);
+
       // Call the login API
-      const response = await AuthService.getLoggedUser(userId, password);
+      const response = await AuthService.getLoggedUser(userCredentials);
+
+      console.log("response",response);
 
       if (response.success && response.data) {
         const userBranches = await UserStorage.getUserBranches();
@@ -40,25 +62,49 @@ export default function SignInForm() {
         if (Array.isArray(userBranches) && userBranches.length > 1) {
           // Navigate to Switch Company page
           router.push('/pages/switch-company-form');
-        } else {
+        } else if (userBranches.length === 1) {
           await UserStorage.saveSelectedBranch(userBranches[0]);
-          const UserCode = userBranches[0].userId + "$" + userBranches[0].companyId
-          const response = await AuthService.getTokenString(UserCode);
+          const UserCode = userBranches[0].userId + "$" + userBranches[0].companyId;
+          const tokenResponse = await AuthService.getTokenString(UserCode);
 
-          if (response?.data) {
+          if (tokenResponse?.data) {
             // Navigate to Dashboard
             router.push('/pages/Dashboard/Dashbord');
           } else {
-            console.warn('No data in response:', response);
+            console.warn('No data in token response:', tokenResponse);
+            Alert.alert('Error', 'Failed to get authentication token');
           }
+        } else {
+          // No branches found
+          Alert.alert('Error', 'No assigned companies found for the given User.');
         }
 
       } else {
-        Alert.alert('Login Failed', response.error || 'Invalid credentials');
+        // Handle different error status codes
+        switch (response.statusCode) {
+          case 401:
+            Alert.alert('Login Failed', 'Invalid credentials');
+            break;
+          case 404:
+            // Use the error message from the response for 404
+            Alert.alert('Login Failed', response.error || response.data);
+            break;
+          default:
+            Alert.alert('Login Failed', response.error || response.data);
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+
+      // Handle specific error cases in catch block if needed
+      if (error.response?.status === 401) {
+        Alert.alert('Login Failed', 'Invalid credentials');
+      } else if (error.response?.status === 404) {
+        // Use error message from the error response for 404
+        Alert.alert('Login Failed', error.response?.data?.message || error.message || 'No assigned companies found for the given User.');
+      } else {
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

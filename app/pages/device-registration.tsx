@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
@@ -14,10 +13,11 @@ import { Stack } from 'expo-router';
 import { getScreenOptions } from '@/components/shared/headerOption';
 import { useColorScheme } from 'nativewind';
 import { RegisteredDevice } from '../Types/user.types';
-import { Card } from '@/components/ui/card';
+import { Text } from '@/components/ui/text';
 
 const DeviceRegistrationsPage = () => {
   const [devices, setDevices] = useState<RegisteredDevice[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState<any>();
   const [loading, setLoading] = useState(true);
   const { colorScheme } = useColorScheme();
 
@@ -53,15 +53,28 @@ const DeviceRegistrationsPage = () => {
   const approveDevice = async (deviceId: number) => {
     try {
 
-      // Replace with your actual API endpoint
-      const response = '';
+      // Find the device first and use it immediately
+      const device = devices.find(device => device.Id === deviceId);
 
-      if (response.ok) {
+      if (!device) {
+        Alert.alert('Error', 'Device not found');
+        return;
+      }
+
+      // Create updated device object with new status
+      const updatedDevice = { ...device, Status: 1 };
+
+      // Use the device we just found, not selectedDevice from state
+      const response = await DeviceService.UpdateRegisteredDevice(updatedDevice);
+
+      if (response.statusCode === 200) {
+        // Update both devices list and selected device
         setDevices((prevDevices) =>
           prevDevices.map((device) =>
-            device.Id === deviceId ? { ...device, Status: 2 } : device
+            device.Id === deviceId ? updatedDevice : device
           )
         );
+        setSelectedDevice(updatedDevice);
         Alert.alert('Success', 'Device approved successfully');
       }
     } catch (error) {
@@ -72,24 +85,39 @@ const DeviceRegistrationsPage = () => {
 
   const removeDevice = async (deviceId: number) => {
     Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to remove this device?',
+      'Confirm Disable',
+      'Are you sure you want to disable this device?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Disable',
           style: 'destructive',
           onPress: async () => {
-            try {
-              // Replace with your actual API endpoint
-              const response = await fetch(`YOUR_API_ENDPOINT/${deviceId}`, {
-                method: 'DELETE',
-              });
 
-              if (response.ok) {
+            try {
+
+              // Find the device first and use it immediately
+              const device = devices.find(device => device.Id === deviceId);
+
+              if (!device) {
+                Alert.alert('Error', 'Device not found');
+                return;
+              }
+
+              // Create updated device object with new status
+              const updatedDevice = { ...device, Status: 2 };
+
+              // Use the device we just found, not selectedDevice from state
+              const response = await DeviceService.UpdateRegisteredDevice(updatedDevice);
+
+              if (response.statusCode === 200) {
+                // Update both devices list and selected device
                 setDevices((prevDevices) =>
-                  prevDevices.filter((device) => device.Id !== deviceId)
+                  prevDevices.map((device) =>
+                    device.Id === deviceId ? updatedDevice : device
+                  )
                 );
+                setSelectedDevice(updatedDevice);
                 Alert.alert('Success', 'Device removed successfully');
               }
             } catch (error) {
@@ -178,7 +206,7 @@ const DeviceRegistrationsPage = () => {
                     style={[styles.button, styles.approveButton]}
                     onPress={() => approveDevice(item.Id)}
                   >
-                    <Text style={styles.buttonText}>Approve</Text>
+                    <Text style={styles.buttonText}>Enable</Text>
                   </TouchableOpacity>
                 )}
 
@@ -191,7 +219,7 @@ const DeviceRegistrationsPage = () => {
                   onPress={() => removeDevice(item.Id)}
                   disabled={!isApproved}
                 >
-                  <Text style={styles.buttonText}>Remove</Text>
+                  <Text style={styles.buttonText}>Disable</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -222,7 +250,6 @@ const DeviceRegistrationsPage = () => {
           </View>
         }
       />
-
     </View>
   );
 };
@@ -284,12 +311,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     width: 140,
   },
   value: {
     fontSize: 14,
-    color: '#666',
     flex: 1,
   },
   statusText: {
@@ -317,8 +342,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#BDBDBD',
   },
   buttonText: {
-    color: '#fff',
     fontSize: 14,
+    color:'#ffffffff',
     fontWeight: '600',
   },
   emptyContainer: {
@@ -328,7 +353,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
   },
 });
 
