@@ -15,8 +15,8 @@ type NavItem = {
 const navItems: NavItem[] = [
   { id: 'home', label: 'Home', icon: '🏠', route: '/pages/Dashboard/Dashbord' },
   { id: 'purchase', label: 'Purchase', icon: '🛍️', route: '/pages/purchase' },
+  { id: 'cart', label: 'Cart', icon: '🛒', route: '/pages/cart' },
   { id: 'sales', label: 'Sales', icon: '💵', route: '/pages/sales' },
-//   { id: 'cart', label: 'Cart', icon: '🛍️', route: '/pages/cart' },
   { id: 'profile', label: 'Profile', icon: '👤', route: '/pages/profile' },
 ];
 
@@ -34,7 +34,7 @@ export function BottomNavigation() {
   };
 
   return (
-    <View 
+    <View
       className={`border-t ${colorScheme === 'dark' ? 'bg-card border-border' : 'bg-white border-gray-200'}`}
       style={styles.container}
     >
@@ -57,7 +57,7 @@ export function BottomNavigation() {
                 {item.icon}
               </Text>
             </View>
-            <Text 
+            <Text
               className={active ? 'text-primary' : 'text-muted-foreground'}
               style={[
                 styles.label,

@@ -68,7 +68,6 @@ export default function SignUpForm() {
       setLoading(true);
 
       const userCredentials = userId + "$" + password + "$" + uniqueId;
-      console.log("uniqueId", uniqueId);
 
       // Call the registration API
       const response = await AuthService.postNewUser(userCredentials);

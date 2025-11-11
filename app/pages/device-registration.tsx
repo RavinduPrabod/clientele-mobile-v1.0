@@ -158,7 +158,7 @@ const DeviceRegistrationsPage = () => {
           options={getScreenOptions(colorScheme ?? 'light', {
             pageTitle: 'Device Registration',
             hideBackButton: false,
-            showThemeToggle: true
+            showThemeToggle: false
           })}
         />
         <View className="flex-1 bg-background mt-0" >

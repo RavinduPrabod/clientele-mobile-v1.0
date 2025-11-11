@@ -112,7 +112,6 @@ class AuthService {
       // Check response status
       if (response.status === 200) {
         await TokenStorage.setTokens(response.data.token);
-        console.log("login token", await TokenStorage.getAccessToken())
         return {
           success: true,
           data: response.data,
@@ -227,7 +226,6 @@ class AuthService {
   async logout(): Promise<void> {
     try {
       await TokenStorage.clearTokens(await TokenStorage.getAccessToken())
-      console.log("logout token", await TokenStorage.getAccessToken())
     } catch (error) {
       console.error('Logout error:', error);
     }

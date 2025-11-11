@@ -5,6 +5,9 @@ import { ScrollView, StyleSheet, View, Pressable, Alert, TextInput } from 'react
 import { Stack } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { getScreenOptions } from '@/components/shared/headerOption';
+import { AppUsers, CompanyInfo, UserBranch, UserCompany } from '../Types/user.types';
+import MaintenanceService from '../services/MaintananceService';
+import { UserStorage } from '@/lib/userStorage';
 
 // Type definitions
 type Company = {
@@ -108,10 +111,10 @@ const mockAssignments: UserCompanyAssignment[] = [
 
 export default function AssignedCompanies() {
   const { colorScheme } = useColorScheme();
-  const [companies, setCompanies] = React.useState<Company[]>(mockCompanies);
-  const [users, setUsers] = React.useState<User[]>(mockUsers);
-  const [assignments, setAssignments] = React.useState<UserCompanyAssignment[]>(mockAssignments);
-  const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
+  const [companies, setCompanies] = React.useState<CompanyInfo[]>([]);
+  const [users, setUsers] = React.useState<AppUsers[]>([]);
+  const [assignments, setAssignments] = React.useState<UserCompany[]>();
+  const [selectedUser, setSelectedUser] = React.useState<UserBranch | null>(null);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [loadingCompanyId, setLoadingCompanyId] = React.useState<string | null>(null);
 
@@ -121,296 +124,301 @@ export default function AssignedCompanies() {
 
   const loadData = async () => {
     try {
-      // TODO: Replace with your API calls
-      // const companiesResponse = await CompanyService.getRegisteredCompanies();
-      // const usersResponse = await UserService.getGuestUsers();
-      // const assignmentsResponse = await CompanyService.getUserAssignments();
+      await MaintenanceService.getAllCompanies();
+      await MaintenanceService.getAllAppUsers();
+      //const assignmentsResponse = await CompanyService.getUserAssignments();
+      const allCompanies = await UserStorage.getAllCompanies();
+      const allUsers = await UserStorage.getAllAppUsers();
 
-      setCompanies(mockCompanies);
-      setUsers(mockUsers);
-      setAssignments(mockAssignments);
+      setCompanies(allCompanies);
+      setUsers(allUsers);
+
+      console.log('setCompanies', allCompanies);
+      console.log('setUsers', allUsers);
+
+      //setAssignments(mockAssignments);
     } catch (error) {
       console.error('Error loading data:', error);
       Alert.alert('Error', 'Failed to load data');
     }
   };
 
-  const getUserAssignments = (userId: string): string[] => {
-    const assignment = assignments.find(a => a.userId === userId);
-    return assignment?.companyIds || [];
-  };
+  // const getUserAssignments = (userId: string): string[] => {
+  //   const assignment = assignments.find(a => a.userId === userId);
+  //   return assignment?.companyIds || [];
+  // };
 
-  const isCompanyAssigned = (userId: string, companyId: string): boolean => {
-    const userCompanies = getUserAssignments(userId);
-    return userCompanies.includes(companyId);
-  };
+  // const isCompanyAssigned = (userId: string, companyId: string): boolean => {
+  //   const userCompanies = getUserAssignments(userId);
+  //   return userCompanies.includes(companyId);
+  // };
 
-  const handleToggleCompany = async (userId: string, companyId: string) => {
-    const isCurrentlyAssigned = isCompanyAssigned(userId, companyId);
-    setLoadingCompanyId(companyId);
+  // const handleToggleCompany = async (userId: string, companyId: string) => {
+  //   const isCurrentlyAssigned = isCompanyAssigned(userId, companyId);
+  //   setLoadingCompanyId(companyId);
 
-    try {
-      if (isCurrentlyAssigned) {
-        // Unassign company - Real-time save
-        // TODO: Replace with your API call
-        // await CompanyService.unassignCompany(userId, companyId);
+  //   try {
+  //     if (isCurrentlyAssigned) {
+  //       // Unassign company - Real-time save
+  //       // TODO: Replace with your API call
+  //       // await CompanyService.unassignCompany(userId, companyId);
 
-        await new Promise(resolve => setTimeout(resolve, 300));
+  //       await new Promise(resolve => setTimeout(resolve, 300));
 
-        setAssignments(prevAssignments =>
-          prevAssignments.map(assignment =>
-            assignment.userId === userId
-              ? {
-                ...assignment,
-                companyIds: assignment.companyIds.filter(id => id !== companyId),
-              }
-              : assignment
-          )
-        );
+  //       setAssignments(prevAssignments =>
+  //         prevAssignments.map(assignment =>
+  //           assignment.userId === userId
+  //             ? {
+  //               ...assignment,
+  //               companyIds: assignment.companyIds.filter(id => id !== companyId),
+  //             }
+  //             : assignment
+  //         )
+  //       );
 
-        // Success feedback can be subtle or removed for better UX
-        // Alert.alert('Success', 'Company unassigned');
-      } else {
-        // Assign company - Real-time save
-        // TODO: Replace with your API call
-        // await CompanyService.assignCompany(userId, companyId);
+  //       // Success feedback can be subtle or removed for better UX
+  //       // Alert.alert('Success', 'Company unassigned');
+  //     } else {
+  //       // Assign company - Real-time save
+  //       // TODO: Replace with your API call
+  //       // await CompanyService.assignCompany(userId, companyId);
 
-        await new Promise(resolve => setTimeout(resolve, 300));
+  //       await new Promise(resolve => setTimeout(resolve, 300));
 
-        setAssignments(prevAssignments => {
-          const existingAssignment = prevAssignments.find(a => a.userId === userId);
-          if (existingAssignment) {
-            return prevAssignments.map(assignment =>
-              assignment.userId === userId
-                ? {
-                  ...assignment,
-                  companyIds: [...assignment.companyIds, companyId],
-                }
-                : assignment
-            );
-          } else {
-            return [...prevAssignments, { userId, companyIds: [companyId] }];
-          }
-        });
+  //       setAssignments(prevAssignments => {
+  //         const existingAssignment = prevAssignments.find(a => a.userId === userId);
+  //         if (existingAssignment) {
+  //           return prevAssignments.map(assignment =>
+  //             assignment.userId === userId
+  //               ? {
+  //                 ...assignment,
+  //                 companyIds: [...assignment.companyIds, companyId],
+  //               }
+  //               : assignment
+  //           );
+  //         } else {
+  //           return [...prevAssignments, { userId, companyIds: [companyId] }];
+  //         }
+  //       });
 
-        // Success feedback can be subtle or removed for better UX
-        // Alert.alert('Success', 'Company assigned');
-      }
-    } catch (error) {
-      console.error('Error toggling company assignment:', error);
-      Alert.alert('Error', 'Failed to update company assignment');
-    } finally {
-      setLoadingCompanyId(null);
-    }
-  };
+  //       // Success feedback can be subtle or removed for better UX
+  //       // Alert.alert('Success', 'Company assigned');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error toggling company assignment:', error);
+  //     Alert.alert('Error', 'Failed to update company assignment');
+  //   } finally {
+  //     setLoadingCompanyId(null);
+  //   }
+  // };
 
-  const handleUserSelect = (user: User) => {
-    setSelectedUser(user);
-  };
+  // const handleUserSelect = (user: User) => {
+  //   setSelectedUser(user);
+  // };
 
-  const handleBackToUsers = () => {
-    setSelectedUser(null);
-  };
+  // const handleBackToUsers = () => {
+  //   setSelectedUser(null);
+  // };
 
-  const filteredUsers = users.filter(user =>
-    user.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.userId.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // const filteredUsers = users.filter(user =>
+  //   user.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //   user.userId.toLowerCase().includes(searchQuery.toLowerCase())
+  // );
 
-  const getAssignedCount = (userId: string): number => {
-    return getUserAssignments(userId).length;
-  };
+  // const getAssignedCount = (userId: string): number => {
+  //   return getUserAssignments(userId).length;
+  // };
 
-  return (
-    <>
-      <Stack.Screen
-        options={getScreenOptions(colorScheme ?? 'light', {
-          pageTitle: 'Company Assignments',
-          hideBackButton: false,
-          showThemeToggle: false
-        })}
-      />
-      <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <View style={styles.headerContainer}>
-            <Text className="text-muted-foreground text-sm mb-4">
-              Assign companies to users
-            </Text>
+  // return (
+  //   <>
+  //     <Stack.Screen
+  //       options={getScreenOptions(colorScheme ?? 'light', {
+  //         pageTitle: 'Company Assignments',
+  //         hideBackButton: false,
+  //         showThemeToggle: false
+  //       })}
+  //     />
+  //     <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
+  //       <ScrollView
+  //         style={styles.scrollView}
+  //         contentContainerStyle={styles.scrollContent}
+  //         showsVerticalScrollIndicator={false}>
+  //         {/* Header */}
+  //         <View style={styles.headerContainer}>
+  //           <Text className="text-muted-foreground text-sm mb-4">
+  //             Assign companies to users
+  //           </Text>
 
-            {/* Search Bar */}
-            <View className="bg-card border border-border rounded-xl p-3 flex-row items-center">
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                className="flex-1 text-foreground ml-2"
-                placeholder="Search users..."
-                placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          </View>
+  //           {/* Search Bar */}
+  //           <View className="bg-card border border-border rounded-xl p-3 flex-row items-center">
+  //             <Text style={styles.searchIcon}>🔍</Text>
+  //             <TextInput
+  //               className="flex-1 text-foreground ml-2"
+  //               placeholder="Search users..."
+  //               placeholderTextColor={colorScheme === 'dark' ? '#9ca3af' : '#6b7280'}
+  //               value={searchQuery}
+  //               onChangeText={setSearchQuery}
+  //             />
+  //           </View>
+  //         </View>
 
-          <View style={styles.contentContainer}>
-            {!selectedUser ? (
-              // User List View
-              <>
-                <Text className="text-foreground text-lg font-bold mb-3">
-                  Guest Users ({filteredUsers.length})
-                </Text>
+  //         <View style={styles.contentContainer}>
+  //           {!selectedUser ? (
+  //             // User List View
+  //             <>
+  //               <Text className="text-foreground text-lg font-bold mb-3">
+  //                 Guest Users ({filteredUsers.length})
+  //               </Text>
 
-                {filteredUsers.length === 0 ? (
-                  <View style={styles.emptyContainer}>
-                    <Text style={styles.emptyIcon}>👥</Text>
-                    <Text className="text-muted-foreground text-base text-center mt-4">
-                      No users found
-                    </Text>
-                  </View>
-                ) : (
-                  filteredUsers.map((user) => {
-                    const assignedCount = getAssignedCount(user.userId);
+  //               {filteredUsers.length === 0 ? (
+  //                 <View style={styles.emptyContainer}>
+  //                   <Text style={styles.emptyIcon}>👥</Text>
+  //                   <Text className="text-muted-foreground text-base text-center mt-4">
+  //                     No users found
+  //                   </Text>
+  //                 </View>
+  //               ) : (
+  //                 filteredUsers.map((user) => {
+  //                   const assignedCount = getAssignedCount(user.userId);
 
-                    return (
-                      <Pressable
-                        key={user.id}
-                        style={({ pressed }) => [
-                          styles.userCard,
-                          pressed && styles.userCardPressed,
-                        ]}
-                        onPress={() => handleUserSelect(user)}
-                      >
-                        <View style={styles.userCardContent}>
-                          <View className="w-14 h-14 rounded-full bg-muted justify-center items-center">
-                            <Text style={styles.userIcon}>👤</Text>
-                          </View>
-                          <View style={styles.userInfo}>
-                            <Text className="text-foreground text-base font-bold mb-0.5">
-                              {user.userName}
-                            </Text>
-                            <Text className="text-muted-foreground text-xs mb-1">
-                              {user.email}
-                            </Text>
-                            <Text className="text-muted-foreground text-xs">
-                              User ID: {user.userId}
-                            </Text>
-                            <View style={styles.assignedBadge}>
-                              <Text className="text-primary text-xs font-semibold">
-                                📊 {assignedCount} {assignedCount === 1 ? 'company' : 'companies'} assigned
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={styles.arrowContainer}>
-                            <Text style={styles.arrowIcon}>›</Text>
-                          </View>
-                        </View>
-                      </Pressable>
-                    );
-                  })
-                )}
-              </>
-            ) : (
-              // Company Assignment View
-              <>
-                {/* Back Button */}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.backButton,
-                    pressed && styles.backButtonPressed,
-                  ]}
-                  onPress={handleBackToUsers}
-                >
-                  <Text style={styles.backIcon}>‹</Text>
-                  <Text className="text-primary text-sm font-semibold ml-2">
-                    Back to Users
-                  </Text>
-                </Pressable>
+  //                   return (
+  //                     <Pressable
+  //                       key={user.id}
+  //                       style={({ pressed }) => [
+  //                         styles.userCard,
+  //                         pressed && styles.userCardPressed,
+  //                       ]}
+  //                       onPress={() => handleUserSelect(user)}
+  //                     >
+  //                       <View style={styles.userCardContent}>
+  //                         <View className="w-14 h-14 rounded-full bg-muted justify-center items-center">
+  //                           <Text style={styles.userIcon}>👤</Text>
+  //                         </View>
+  //                         <View style={styles.userInfo}>
+  //                           <Text className="text-foreground text-base font-bold mb-0.5">
+  //                             {user.userName}
+  //                           </Text>
+  //                           <Text className="text-muted-foreground text-xs mb-1">
+  //                             {user.email}
+  //                           </Text>
+  //                           <Text className="text-muted-foreground text-xs">
+  //                             User ID: {user.userId}
+  //                           </Text>
+  //                           <View style={styles.assignedBadge}>
+  //                             <Text className="text-primary text-xs font-semibold">
+  //                               📊 {assignedCount} {assignedCount === 1 ? 'company' : 'companies'} assigned
+  //                             </Text>
+  //                           </View>
+  //                         </View>
+  //                         <View style={styles.arrowContainer}>
+  //                           <Text style={styles.arrowIcon}>›</Text>
+  //                         </View>
+  //                       </View>
+  //                     </Pressable>
+  //                   );
+  //                 })
+  //               )}
+  //             </>
+  //           ) : (
+  //             // Company Assignment View
+  //             <>
+  //               {/* Back Button */}
+  //               <Pressable
+  //                 style={({ pressed }) => [
+  //                   styles.backButton,
+  //                   pressed && styles.backButtonPressed,
+  //                 ]}
+  //                 onPress={handleBackToUsers}
+  //               >
+  //                 <Text style={styles.backIcon}>‹</Text>
+  //                 <Text className="text-primary text-sm font-semibold ml-2">
+  //                   Back to Users
+  //                 </Text>
+  //               </Pressable>
 
-                {/* Selected User Info */}
-                <View className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-sm">
-                  <View style={styles.selectedUserHeader}>
-                    <View className="w-16 h-16 rounded-full bg-muted justify-center items-center">
-                      <Text style={styles.selectedUserIcon}>👤</Text>
-                    </View>
-                    <View style={styles.selectedUserInfo}>
-                      <Text className="text-foreground text-xl font-bold mb-1">
-                        {selectedUser.userName}
-                      </Text>
-                      <Text className="text-muted-foreground text-xs mb-0.5">
-                        {selectedUser.email}
-                      </Text>
-                      <Text className="text-muted-foreground text-xs">
-                        User ID: {selectedUser.userId}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
+  //               {/* Selected User Info */}
+  //               <View className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-sm">
+  //                 <View style={styles.selectedUserHeader}>
+  //                   <View className="w-16 h-16 rounded-full bg-muted justify-center items-center">
+  //                     <Text style={styles.selectedUserIcon}>👤</Text>
+  //                   </View>
+  //                   <View style={styles.selectedUserInfo}>
+  //                     <Text className="text-foreground text-xl font-bold mb-1">
+  //                       {selectedUser.userName}
+  //                     </Text>
+  //                     <Text className="text-muted-foreground text-xs mb-0.5">
+  //                       {selectedUser.email}
+  //                     </Text>
+  //                     <Text className="text-muted-foreground text-xs">
+  //                       User ID: {selectedUser.userId}
+  //                     </Text>
+  //                   </View>
+  //                 </View>
+  //               </View>
 
-                {/* Company List with Checkboxes */}
-                <Text className="text-foreground text-lg font-bold mb-3">
-                  Registered Companies ({companies.length})
-                </Text>
-                <Text className="text-muted-foreground text-xs mb-4">
-                  Check or uncheck companies to assign. Changes are saved automatically.
-                </Text>
+  //               {/* Company List with Checkboxes */}
+  //               <Text className="text-foreground text-lg font-bold mb-3">
+  //                 Registered Companies ({companies.length})
+  //               </Text>
+  //               <Text className="text-muted-foreground text-xs mb-4">
+  //                 Check or uncheck companies to assign. Changes are saved automatically.
+  //               </Text>
 
-                {companies.map((company) => {
-                  const isAssigned = isCompanyAssigned(selectedUser.userId, company.id);
-                  const isLoading = loadingCompanyId === company.id;
+  //               {companies.map((company) => {
+  //                 const isAssigned = isCompanyAssigned(selectedUser.userId, company.id);
+  //                 const isLoading = loadingCompanyId === company.id;
 
-                  return (
-                    <Pressable
-                      key={company.id}
-                      style={({ pressed }) => [
-                        styles.companyCard,
-                        isAssigned && styles.companyCardAssigned,
-                        pressed && styles.companyCardPressed,
-                      ]}
-                      onPress={() => handleToggleCompany(selectedUser.userId, company.id)}
-                      disabled={isLoading}
-                    >
-                      <View style={styles.companyCardContent}>
-                        <View style={styles.companyCheckbox}>
-                          {isLoading ? (
-                            <View style={styles.checkboxLoading}>
-                              <Text style={styles.loadingText}>⏳</Text>
-                            </View>
-                          ) : isAssigned ? (
-                            <View style={styles.checkboxChecked}>
-                              <Text style={styles.checkboxCheckmark}>✓</Text>
-                            </View>
-                          ) : (
-                            <View style={styles.checkboxUnchecked} />
-                          )}
-                        </View>
-                        <View style={styles.companyIcon}>
-                          <Text style={styles.companyIconText}>🏢</Text>
-                        </View>
-                        <View style={styles.companyInfo}>
-                          <Text className="text-foreground text-sm font-bold mb-1">
-                            {company.companyName}
-                          </Text>
-                          <Text className="text-muted-foreground text-xs">
-                            📍 {company.location}
-                          </Text>
-                          <Text className="text-muted-foreground text-xs">
-                            📅 Registered: {company.registrationDate}
-                          </Text>
-                        </View>
-                      </View>
-                    </Pressable>
-                  );
-                })}
-              </>
-            )}
-          </View>
-        </ScrollView>
-      </View>
-    </>
-  );
+  //                 return (
+  //                   <Pressable
+  //                     key={company.id}
+  //                     style={({ pressed }) => [
+  //                       styles.companyCard,
+  //                       isAssigned && styles.companyCardAssigned,
+  //                       pressed && styles.companyCardPressed,
+  //                     ]}
+  //                     onPress={() => handleToggleCompany(selectedUser.userId, company.id)}
+  //                     disabled={isLoading}
+  //                   >
+  //                     <View style={styles.companyCardContent}>
+  //                       <View style={styles.companyCheckbox}>
+  //                         {isLoading ? (
+  //                           <View style={styles.checkboxLoading}>
+  //                             <Text style={styles.loadingText}>⏳</Text>
+  //                           </View>
+  //                         ) : isAssigned ? (
+  //                           <View style={styles.checkboxChecked}>
+  //                             <Text style={styles.checkboxCheckmark}>✓</Text>
+  //                           </View>
+  //                         ) : (
+  //                           <View style={styles.checkboxUnchecked} />
+  //                         )}
+  //                       </View>
+  //                       <View style={styles.companyIcon}>
+  //                         <Text style={styles.companyIconText}>🏢</Text>
+  //                       </View>
+  //                       <View style={styles.companyInfo}>
+  //                         <Text className="text-foreground text-sm font-bold mb-1">
+  //                           {company.companyName}
+  //                         </Text>
+  //                         <Text className="text-muted-foreground text-xs">
+  //                           📍 {company.location}
+  //                         </Text>
+  //                         <Text className="text-muted-foreground text-xs">
+  //                           📅 Registered: {company.registrationDate}
+  //                         </Text>
+  //                       </View>
+  //                     </View>
+  //                   </Pressable>
+  //                 );
+  //               })}
+  //             </>
+  //           )}
+  //         </View>
+  //       </ScrollView>
+  //     </View>
+  //   </>
+  // );
 }
 
 const styles = StyleSheet.create({

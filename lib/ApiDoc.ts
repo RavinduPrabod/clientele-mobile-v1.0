@@ -19,3 +19,9 @@ export class DeviceRegistration{
   LoadDeviceList = "/UserMaintenance/LoadDeviceList";
   UpdateRegisteredDevice = "/UserMaintenance/UpdateRegisteredDevice";
 }
+
+export class AssignedCompanies{
+  GetCompanies = "/UserMaintenance/GetCompanies";
+  LoadApplicationUsers = "/UserMaintenance/LoadApplicationUsers";
+  GetAssignUserCompanies = "/UserMaintenance/GetAssignUserCompanies";
+}

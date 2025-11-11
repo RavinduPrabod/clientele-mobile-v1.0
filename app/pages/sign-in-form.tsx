@@ -49,12 +49,9 @@ export default function SignInForm() {
       }
 
       const userCredentials = userId + "$" + password + "$" + uniqueId;
-      console.log("userCredentials", userCredentials);
 
       // Call the login API
       const response = await AuthService.getLoggedUser(userCredentials);
-
-      console.log("response",response);
 
       if (response.success && response.data) {
         const userBranches = await UserStorage.getUserBranches();

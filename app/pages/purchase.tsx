@@ -14,10 +14,13 @@ import { getScreenOptions } from '@/components/shared/headerOption';
 import { UserStorage } from '@/lib/userStorage';
 import mapCartToTransactionDto from '@/components/shared/dataMaping';
 import { AlertDescription } from '@/components/ui/alert';
+import { useCart } from '@/lib/cartContext';
 
 export default function PurchaseForm() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+
+  const { cart, tempCart, addToCart, clearCart, getTotalItems } = useCart();
 
   // Form state
   const [selectedProduct, setSelectedProduct] = React.useState<string | null>(null);
@@ -34,11 +37,10 @@ export default function PurchaseForm() {
   const [categories, setCategories] = React.useState<any[]>([]);
 
   // Cart state - Fixed: Use TransactionDetails type
-  const [cart, setCart] = React.useState<TransactionDetails[]>([]);
-  const [tempCart, setTempCart] = React.useState<TempCart[]>([]);
+  // const [cart, setCart] = React.useState<TransactionDetails[]>([]);
+  // const [tempCart, setTempCart] = React.useState<TempCart[]>([]);
   const [showCart, setShowCart] = React.useState(false);
   const [selectedCartItem, setSelectedCartItem] = React.useState<any | null>(null);
-
   const [isCategoryLoading, setIsCategoryLoading] = React.useState(false);
 
   // Calculated values
@@ -103,7 +105,6 @@ export default function PurchaseForm() {
       setSelectedCategoryCode(null);
 
       const response = await TransactionService.getProductCategoryByProductCode(productCode);
-      console.log('✅ Category API Response:', response);
 
       if (response?.statusCode === 200 && Array.isArray(response.data)) {
         setCategories(response.data);
@@ -156,7 +157,7 @@ export default function PurchaseForm() {
         TxnDate: currentDate,
         TxnYear: currentYear,
         TxnMonth: currentMonth,
-        SeqNo: cart.length + 1,
+        SeqNo: cart.length + 1, // ✅ Using cart from context
         ProductId: selectedProductCode || '',
         CategoryCode: selectedCategoryCode || '',
         GrossQty: parseFloat(gross),
@@ -184,10 +185,16 @@ export default function PurchaseForm() {
         NetQty: netKg,
         UnitPrice: parseFloat(price),
         NetValue: totalValue
-      }
+      };
 
-      setTempCart(prev => [...prev, tempCartDetails]);
-      setCart(prev => [...prev, transactionDetail]);
+      // 5️⃣ REPLACE THESE LINES:
+      // ❌ setTempCart(prev => [...prev, tempCartDetails]);
+      // ❌ setCart(prev => [...prev, transactionDetail]);
+
+      // ✅ WITH THIS LINE:
+      addToCart(transactionDetail, tempCartDetails);
+      console.log("temcart",cart)
+
       ToastAndroid.show('Product added to cart!', ToastAndroid.SHORT);
 
       if (scrollRef.current) {
@@ -209,10 +216,7 @@ export default function PurchaseForm() {
     }
   }
 
-  const handleRemoveProduct = (serialNo: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.SerialNo !== serialNo));
-  };
-
+  // 6️⃣ OPTIONAL: Update handlePlaceOrder if you have it
   async function handlePlaceOrder() {
     if (cart.length === 0) {
       Alert.alert('Error', 'Your cart is empty!');
@@ -220,19 +224,16 @@ export default function PurchaseForm() {
     }
 
     try {
-      // Map cart to transaction DTO
-      const transactionDto = await mapCartToTransactionDto(
-        cart,
-        1 // purchase
-      );
-
-      console.log('Sending to API:', JSON.stringify(transactionDto, null, 2));
-
+      const transactionDto = await mapCartToTransactionDto(cart, 1);
       const response = await TransactionService.insertTransactionDetails(transactionDto);
 
       if (response.statusCode === 200) {
         ToastAndroid.show('Order placed successfully!', ToastAndroid.SHORT);
-        setCart([]);
+
+        // ❌ setCart([]);
+        // ✅ clearCart(); // Use context function instead
+        clearCart();
+
         setShowCart(false);
       } else {
         Alert.alert('Error', 'Failed to place order');
@@ -242,6 +243,37 @@ export default function PurchaseForm() {
       Alert.alert('Error', 'Failed to place order. Please try again.');
     }
   }
+
+  // const handleRemoveProduct = (serialNo: number) => {
+  //   setCart((prevCart) => prevCart.filter((item) => item.SerialNo !== serialNo));
+  // };
+
+  // async function handlePlaceOrder() {
+  //   if (cart.length === 0) {
+  //     Alert.alert('Error', 'Your cart is empty!');
+  //     return;
+  //   }
+
+  //   try {
+  //     // Map cart to transaction DTO
+  //     const transactionDto = await mapCartToTransactionDto(
+  //       cart,
+  //       1 // purchase
+  //     );
+  //     const response = await TransactionService.insertTransactionDetails(transactionDto);
+
+  //     if (response.statusCode === 200) {
+  //       ToastAndroid.show('Order placed successfully!', ToastAndroid.SHORT);
+  //       setCart([]);
+  //       setShowCart(false);
+  //     } else {
+  //       Alert.alert('Error', 'Failed to place order');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error placing order:', error);
+  //     Alert.alert('Error', 'Failed to place order. Please try again.');
+  //   }
+  // }
 
   return (
     <>
@@ -254,64 +286,6 @@ export default function PurchaseForm() {
       />
       <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
         <View style={styles.container}>
-
-          {/* Cart Icon with Badge */}
-          <Pressable onPress={() => {
-            if (cart.length === 0) {
-              Alert.alert('Error', 'Your cart is empty. Please add at least one product.');
-              return;
-            }
-            setShowCart(!showCart);
-          }}
-            style={styles.cartButton}>
-            <Text style={styles.cartIcon}><Image source={require('assets/images/add-to-cart.png')} /></Text>
-            {cart.length > 0 && (
-              <View className="absolute top-2 -right-2 bg-destructive rounded-full px-1.5 py-0.5">
-                <Text className="text-destructive-foreground text-xs font-bold">{cart.length}</Text>
-              </View>
-            )}
-          </Pressable>
-          {/* Cart Dropdown - FIXED */}
-          {showCart && (
-            <View className="bg-card p-3 border-b border-border">
-              <Text className="text-foreground text-lg font-bold mb-3 text-center">🛒 Cart Summary</Text>
-              <FlatList
-                data={tempCart}
-                keyExtractor={(item) => item.seqNo.toString()}
-                renderItem={({ item }) => (
-                  <Pressable
-                    className="bg-muted rounded-xl p-3 mb-2.5 border border-border"
-                    onPress={() => setSelectedCartItem(item)}
-                  >
-                    <View style={styles.cartItemHeader}>
-                      <Text className="text-foreground font-bold text-base">{item.productName}</Text>
-                      <Text className="text-muted-foreground text-sm">{item.CategoryName}</Text>
-                    </View>
-                    <View style={styles.cartItemRow}>
-                      <Text className="text-muted-foreground text-xs">Net: {item.NetQty.toFixed(2)} Kg</Text>
-                      <Text className="text-muted-foreground text-xs">
-                        Rs.{item.NetValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </Text>
-                    </View>
-                    <Pressable
-                      onPress={() => handleRemoveProduct(item.seqNo)}
-                      className="self-end bg-destructive/10 rounded-md py-1 px-2 mt-1.5"
-                    >
-                      <Text className="text-destructive font-semibold text-xs">Remove</Text>
-                    </Pressable>
-                  </Pressable>
-                )}
-              />
-
-              <Pressable
-                className="bg-primary rounded-lg p-2.5 items-center mt-2"
-                onPress={handlePlaceOrder}
-              >
-                <Text className="text-primary-foreground font-bold">Place Order</Text>
-              </Pressable>
-            </View>
-          )}
-
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -601,22 +575,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cartButton: {
-    position: 'relative',
-    marginRight: 12,
-    paddingLeft: 350
+    position: 'absolute',
+    top: 10,
+    right: 16,
+    zIndex: 1000,
   },
-  cartIcon: {
-    fontSize: 60
-  },
-  cartItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  cartItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   overlay: {
     position: 'absolute',

@@ -11,6 +11,7 @@ import { View } from 'react-native';
 import { BottomNavigation } from '@/components/shared/BottomNavigation';
 import { useEffect, useState } from 'react';
 import CustomSplashScreen from './Utils/CustomSplashScreen';
+import { CartProvider } from '@/lib/cartContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -61,8 +62,10 @@ export default function RootLayout() {
     <ThemeProvider value={NAV_THEME[colorScheme ?? 'light']}>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       <View style={{ flex: 1 }}>
+        <CartProvider>
         <Stack screenOptions={{ headerShown: true }} />
         {shouldShowBottomNav && <BottomNavigation />}
+        </CartProvider>
       </View>
       <PortalHost />
     </ThemeProvider>

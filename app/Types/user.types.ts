@@ -177,8 +177,8 @@ export interface LoginResponse {
 
 export interface TempCart {
   seqNo: number;
-  productName: string;
-  CategoryName?: string;
+  productName: string | null;
+  CategoryName: string | null;
   GrossQty: number;
   BaleQty: number;
   WastageQty: number;
@@ -194,4 +194,30 @@ export interface RegisteredDevice {
   DeviceType: number,
   RequestDateTime: string,
   Status: number
+}
+
+export interface CompanyInfo {
+  CompanyId: number,
+  CompanyName	:string,
+  CompanyAddress:string,
+  LocationName:string,
+  CompanyTaxRegNo:string,
+  CompanyTelNo:string,
+  EmailAddress:string,
+  ProcessDate:string,
+  TINNo:string,
+  VATNo:string
+}
+
+export interface UserCompany{
+  CompanyId	:number,
+  UserId	:string,
+  Status	:number,
+  CreatedBy	:string,
+  CreatedDateTime	:string
+}
+
+export interface AppUsers{
+  UserId:string,
+  UserStatus:number
 }
