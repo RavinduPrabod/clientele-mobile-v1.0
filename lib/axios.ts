@@ -2,7 +2,7 @@ import { TokenStorage } from './tokenStorage';
 import axios, { AxiosRequestConfig } from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://192.168.4.67/ClienteleAPI/api',
+  baseURL: 'http://192.168.4.67/Clinetele/API/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

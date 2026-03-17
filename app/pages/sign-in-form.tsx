@@ -12,8 +12,8 @@ import { getScreenOptions } from '@/components/shared/headerOption';
 import DeviceInfo from 'react-native-device-info';
 
 export default function SignInForm() {
-  const [userId, setUserId] = React.useState('admin');
-  const [password, setPassword] = React.useState('dms@123');
+  const [userId, setUserId] = React.useState('');
+  const [password, setPassword] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const { colorScheme } = useColorScheme();
   const passwordInputRef = React.useRef<TextInput>(null);

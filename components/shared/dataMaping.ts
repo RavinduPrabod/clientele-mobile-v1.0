@@ -16,7 +16,7 @@ const mapCartToTransactionDto = async (
   const transactionDto: TransactionsSavingDto = {
     TransactionDetails: cart,
     CompanyId: companyId,
-    CusSupName: '',
+    CusSupName: transactionType === 1 ? "Mobile  Purchase" : "Mobile Sales",
     ContactNo: '',
     TransactionType: transactionType,
     TxnDate: currentDate,

@@ -176,6 +176,7 @@ export interface LoginResponse {
 }
 
 export interface TempCart {
+  type:number;
   seqNo: number;
   productName: string | null;
   CategoryName: string | null;

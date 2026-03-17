@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import AuthService from "../services/AuthService";
 import { useColorScheme } from 'nativewind';
@@ -7,6 +7,7 @@ import { getScreenOptions } from "@/components/shared/headerOption";
 import { UserStorage } from "@/lib/userStorage";
 import * as Device from "expo-device";
 import { Bold } from "lucide-react-native";
+import { useCart } from "@/lib/cartContext";
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -16,6 +17,8 @@ export default function ProfileScreen() {
   const [companyName, setcompanyName] = React.useState<string | null>(null);
   const [branchName, setBranchName] = React.useState<string | null>(null);
   const [deviceInfo, setDeviceInfo] = React.useState<string>("");
+  const [isPageDisabled, setIsPageDisabled] = React.useState(false);
+  const { tempCart, clearCart } = useCart();
 
   React.useEffect(() => {
     loadProfileDetails();
@@ -50,10 +53,51 @@ export default function ProfileScreen() {
     router.push("/pages/assigned-companies");
   }
 
-  function handleSignOut() {
+  function cleanSignout() {
+    clearCart();
+    setIsPageDisabled(false);
     AuthService.logout();
     router.replace("/");
   }
+
+function handleSignOut() {
+  const initializePage = async () => {
+    // Fixed condition: should be > 0 (cart has items), not < 0
+    if (tempCart.length === 0) {
+      cleanSignout();
+    } else {
+      // Fixed string interpolation
+      const cartType = tempCart[0].type === 1 ? "purchase" : "sales";
+
+      Alert.alert(
+        'Cart Validation',
+        `Cart already has ${cartType} items. Do you want to clear it?`,
+        [
+          {
+            text: 'No',
+            onPress: () => {
+              // Do nothing, just dismiss alert
+              router.back();
+            },
+            style: 'cancel'
+          },
+          {
+            text: 'Yes',
+            onPress: () => {
+              // Use setTimeout to defer the action after Alert dismisses
+              setTimeout(() => {
+                cleanSignout();
+              }, 100);
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+    }
+  };
+
+  initializePage();
+}
 
   return (
     <>
@@ -63,7 +107,11 @@ export default function ProfileScreen() {
           gestureEnabled: false,
         }}
       />
-      <View className="flex-1 bg-background" style={{ marginTop: 120 }}>
+      <View
+        className="flex-1 bg-background"
+        style={{ marginTop: 120 }}
+        pointerEvents={isPageDisabled ? 'none' : 'auto'}
+      >
         <View style={styles.container}>
           <ScrollView contentContainerStyle={styles.content}>
             {/* User Info */}
@@ -87,7 +135,7 @@ export default function ProfileScreen() {
               <Text className="text-foreground text-base font-semibold">Switch Shop</Text>
             </Pressable>
 
-            {/* ✅ Only visible to admin */}
+            {/* ✅ Only visible to admin
             {userName?.toLowerCase() === "admin" && (
               <Pressable
                 className="flex-row items-center bg-card rounded-xl p-4 mb-3 border border-border"
@@ -106,10 +154,10 @@ export default function ProfileScreen() {
             <Pressable className="flex-row items-center bg-card rounded-xl p-4 mb-3 border border-border">
               <Text style={styles.optionIcon}>🔒</Text>
               <Text className="text-foreground text-base font-semibold">Password Reset</Text>
-            </Pressable>
+            </Pressable> */}
 
             {/* Bottom Options */}
-            <Pressable className="flex-row items-center bg-card rounded-xl p-4 mb-3 border border-border">
+            {/* <Pressable className="flex-row items-center bg-card rounded-xl p-4 mb-3 border border-border">
               <Text style={styles.optionIcon}>❓</Text>
               <Text className="text-foreground text-base font-semibold">Help Center</Text>
             </Pressable>
@@ -117,13 +165,13 @@ export default function ProfileScreen() {
             <Pressable className="flex-row items-center bg-card rounded-xl p-4 mb-3 border border-border">
               <Text style={styles.optionIcon}>ℹ️</Text>
               <Text className="text-foreground text-base font-semibold">About</Text>
-            </Pressable>
+            </Pressable> */}
 
             <Pressable
               className="flex-row items-center bg-card rounded-xl p-4 mb-3 border border-border"
               onPress={handleSignOut}>
               <Text style={styles.optionIcon}>↩️</Text>
-              <Text className="text-foreground text-base font-semibold">Log Out</Text>
+              <Text className="text-foreground text-base font-semibold">Sign Out</Text>
             </Pressable>
           </ScrollView>
         </View>

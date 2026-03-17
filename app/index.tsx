@@ -5,6 +5,7 @@ import * as React from 'react';
 import { ScrollView, View } from 'react-native';
 import SignInForm from './pages/sign-in-form';
 import { getScreenOptions } from '@/components/shared/headerOption';
+import AuthForm from './pages/dual-Tab-Authentication';
 
 export default function Screen() {
   const { colorScheme } = useColorScheme();
@@ -19,7 +20,7 @@ export default function Screen() {
           contentContainerClassName="flex-grow justify-center mt-safe"
           keyboardDismissMode="interactive">
           <View className="w-full max-w-sm self-center">
-            <SignInForm />
+            <AuthForm />
           </View>
         </ScrollView>
       </View>

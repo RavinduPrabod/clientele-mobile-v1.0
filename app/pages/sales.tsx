@@ -1,6 +1,4 @@
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Text } from '@/components/ui/text';
 import * as React from 'react';
 import { Pressable, ScrollView, StyleSheet, View, FlatList, Image, Alert, ToastAndroid, LayoutChangeEvent } from 'react-native';
@@ -12,12 +10,13 @@ import { TriggerRef } from '@rn-primitives/select';
 import { useColorScheme } from 'nativewind';
 import { getScreenOptions } from '@/components/shared/headerOption';
 import { UserStorage } from '@/lib/userStorage';
-import mapCartToTransactionDto from '@/components/shared/dataMaping';
-import { AlertDescription } from '@/components/ui/alert';
+import { useCart } from '@/lib/cartContext';
 
 export default function PurchaseForm() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
+
+  const { cart, tempCart, addToCart, clearCart, getTotalItems } = useCart();
 
   // Form state
   const [selectedProduct, setSelectedProduct] = React.useState<string | null>(null);
@@ -33,13 +32,10 @@ export default function PurchaseForm() {
   const [products, setProducts] = React.useState<any[]>([]);
   const [categories, setCategories] = React.useState<any[]>([]);
 
-  // Cart state - Fixed: Use TransactionDetails type
-  const [cart, setCart] = React.useState<TransactionDetails[]>([]);
-  const [tempCart, setTempCart] = React.useState<TempCart[]>([]);
   const [showCart, setShowCart] = React.useState(false);
-  const [selectedCartItem, setSelectedCartItem] = React.useState<any | null>(null);
-
   const [isCategoryLoading, setIsCategoryLoading] = React.useState(false);
+
+  const [isPageDisabled, setIsPageDisabled] = React.useState(false);
 
   // Calculated values
   const netKg = React.useMemo(() => {
@@ -67,7 +63,45 @@ export default function PurchaseForm() {
   };
 
   React.useEffect(() => {
-    loadActiveProductList();
+    const initializePage = async () => {
+      const cartType = await validateCartType();
+
+      if (cartType !== 1) {
+        // Cart is empty or has purchase items, load products normally
+        setIsPageDisabled(false);
+        loadActiveProductList();
+      } else {
+        // Cart has sales items (type 2), disable page and show alert
+        setIsPageDisabled(true);
+
+        Alert.alert(
+          'Cart Validation',
+          'Cart already has purchase items. Do you want to clear it?',
+          [
+            {
+              text: 'No',
+              onPress: () => {
+                // Redirect to previous page or home
+                router.back();
+              },
+              style: 'cancel'
+            },
+            {
+              text: 'Yes',
+              onPress: () => {
+                // Clear cart and enable page
+                clearCart();
+                setIsPageDisabled(false);
+                loadActiveProductList();
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+      }
+    };
+
+    initializePage();
   }, []);
 
   React.useEffect(() => {
@@ -88,6 +122,27 @@ export default function PurchaseForm() {
       console.error('Error loading product list:', error);
     }
   };
+
+  const validateCartType = async () => {
+    try {
+      if (tempCart.length === 0) {
+        return 0;
+      }
+
+      const cartType = tempCart[0].type;
+
+      // If cart is empty or null, return 0
+      if (cartType === null || cartType === undefined || cartType === 0) {
+        return 0;
+      }
+
+      return cartType;
+    } catch (error) {
+      console.error('Error validating cart type:', error);
+      return 0;
+    }
+  };
+
 
   const handleProductSelect = async (productCode: string) => {
     try {
@@ -155,7 +210,7 @@ export default function PurchaseForm() {
         TxnDate: currentDate,
         TxnYear: currentYear,
         TxnMonth: currentMonth,
-        SeqNo: cart.length + 1,
+        SeqNo: cart.length + 1, // ✅ Using cart from context
         ProductId: selectedProductCode || '',
         CategoryCode: selectedCategoryCode || '',
         GrossQty: parseFloat(gross),
@@ -174,6 +229,7 @@ export default function PurchaseForm() {
       };
 
       const tempCartDetails: TempCart = {
+        type: 2, // Sales
         seqNo: cart.length + 1,
         productName: selectedProduct,
         CategoryName: selectedCategory,
@@ -183,10 +239,12 @@ export default function PurchaseForm() {
         NetQty: netKg,
         UnitPrice: parseFloat(price),
         NetValue: totalValue
-      }
+      };
 
-      setTempCart(prev => [...prev, tempCartDetails]);
-      setCart(prev => [...prev, transactionDetail]);
+      // ✅ WITH THIS LINE:
+      addToCart(transactionDetail, tempCartDetails);
+      //console.log("temcart",cart)
+
       ToastAndroid.show('Product added to cart!', ToastAndroid.SHORT);
 
       if (scrollRef.current) {
@@ -208,37 +266,6 @@ export default function PurchaseForm() {
     }
   }
 
-  const handleRemoveProduct = (serialNo: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.SerialNo !== serialNo));
-  };
-
-  async function handlePlaceOrder() {
-    if (cart.length === 0) {
-      Alert.alert('Error', 'Your cart is empty!');
-      return;
-    }
-
-    try {
-      // Map cart to transaction DTO
-      const transactionDto = await mapCartToTransactionDto(
-        cart,
-        2 // Sales
-      );
-      const response = await TransactionService.insertTransactionDetails(transactionDto);
-
-      if (response.statusCode === 200) {
-        ToastAndroid.show('Order placed successfully!', ToastAndroid.SHORT);
-        setCart([]);
-        setShowCart(false);
-      } else {
-        Alert.alert('Error', 'Failed to place order');
-      }
-    } catch (error) {
-      console.error('Error placing order:', error);
-      Alert.alert('Error', 'Failed to place order. Please try again.');
-    }
-  }
-
   return (
     <>
       <Stack.Screen
@@ -248,7 +275,11 @@ export default function PurchaseForm() {
           showThemeToggle: false
         })}
       />
-      <View className="flex-1 bg-background" style={{ marginTop: 110 }}>
+      <View
+        className="flex-1 bg-background"
+        style={{ marginTop: 110 }}
+        pointerEvents={isPageDisabled ? 'none' : 'auto'}
+      >
         <View style={styles.container}>
           <ScrollView
             style={styles.scrollView}
@@ -258,7 +289,6 @@ export default function PurchaseForm() {
           >
             {/* Form Card */}
             <View className="bg-card rounded-2xl p-5 mb-4 border border-border shadow-sm">
-
               {/* Product Select */}
               <View style={styles.inputGroup}>
                 <Text className="text-muted-foreground text-sm mb-2 font-medium">Product</Text>
@@ -455,57 +485,6 @@ export default function PurchaseForm() {
               <Text className="text-primary-foreground text-lg font-bold">Add Product</Text>
             </Pressable>
           </ScrollView>
-
-          {/* Selected Cart Item Details Modal */}
-          {selectedCartItem && (
-            <View style={styles.overlay}>
-              <View className="w-11/12 bg-card rounded-xl p-5 border border-border shadow-lg">
-                <Text className="text-foreground text-xl font-bold mb-3 text-center">Product Details</Text>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Product:</Text>
-                  <Text className="text-foreground">{selectedCartItem.productName}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Category:</Text>
-                  <Text className="text-foreground">{selectedCartItem.CategoryName}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Gross:</Text>
-                  <Text className="text-foreground">{selectedCartItem.GrossQty} Kg</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Bale:</Text>
-                  <Text className="text-foreground">{selectedCartItem.BaleQty} Kg</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Wastage:</Text>
-                  <Text className="text-foreground">{selectedCartItem.WastageQty} Kg</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Net Kg:</Text>
-                  <Text className="text-foreground">{selectedCartItem.NetQty.toFixed(2)} Kg</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Price:</Text>
-                  <Text className="text-foreground">Rs.{selectedCartItem.UnitPrice.toFixed(2)}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text className="text-muted-foreground font-semibold">Total Value:</Text>
-                  <Text className="text-foreground font-bold">
-                    Rs.{selectedCartItem.NetValue.toFixed(2)}
-                  </Text>
-                </View>
-
-                <Pressable
-                  className="mt-4 bg-primary p-2.5 rounded-lg items-center"
-                  onPress={() => setSelectedCartItem(null)}
-                >
-                  <Text className="text-primary-foreground font-semibold">Close</Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
         </View>
       </View>
     </>
@@ -539,22 +518,21 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cartButton: {
-    position: 'relative',
-    marginRight: 12,
-    paddingLeft: 350
+    position: 'absolute',
+    top: 10,
+    right: 16,
+    zIndex: 1000,
   },
-  cartIcon: {
-    fontSize: 60
-  },
-  cartItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  cartItemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: 'red',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   overlay: {
     position: 'absolute',

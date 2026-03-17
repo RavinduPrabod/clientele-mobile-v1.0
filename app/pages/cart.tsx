@@ -6,22 +6,25 @@ import { getScreenOptions } from '@/components/shared/headerOption';
 import React from 'react';
 import { useCart } from '@/lib/cartContext';
 import { UserStorage } from '@/lib/userStorage';
+import mapCartToTransactionDto from '@/components/shared/dataMaping';
+import TransactionService from '../services/TransactionService';
 
 export default function CartTab() {
   const { colorScheme } = useColorScheme();
   const { tempCart, cart, removeFromCart, clearCart, getTotalValue, getTotalItems } = useCart();
   const [isPlacingOrder, setIsPlacingOrder] = React.useState(false);
+  const [selectedCartItem, setSelectedCartItem] = React.useState<any | null>(null);
 
   React.useEffect(() => {
-    loadTempCart();
+    loadCart();
   }, []);
 
-  const loadTempCart = async () => {
+  const loadCart = async () => {
     try {
-      const savedCart = await UserStorage.getTempCart();
-      console.log('Loaded cart:', savedCart);
+      console.log('insert cart:', cart);
+      console.log('temp cart', tempCart);
     } catch (error) {
-      console.error('Error loading product list:', error);
+      console.error('Error loading cart:', error);
     }
   };
 
@@ -30,7 +33,7 @@ export default function CartTab() {
   };
 
   const handlePlaceOrder = async () => {
-    if (tempCart.length === 0) {
+    if (cart.length === 0) {
       Alert.alert('Empty Cart', 'Please add items to your cart before placing an order.');
       return;
     }
@@ -51,30 +54,30 @@ export default function CartTab() {
           onPress: async () => {
             setIsPlacingOrder(true);
             try {
-              // TODO: Add your order placement API call here
-              // Example:
-              // const response = await placeOrder(cart, tempCart);
-              
-              // For now, just simulate the order
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
+              const transactionDto = await mapCartToTransactionDto(cart, tempCart[0].type);
+              const response = await TransactionService.insertTransactionDetails(transactionDto);
+
               // Clear cart after successful order
               clearCart();
-              await UserStorage.clearTempCart(); // Add this method to UserStorage
-              
-              Alert.alert(
-                'Success',
-                'Your order has been placed successfully!',
-                [
-                  {
-                    text: 'OK',
-                    onPress: () => {
-                      // Navigate to orders screen or home
-                      // router.push('/orders');
+              await UserStorage.clearTempCart();
+
+              if (response.statusCode === 200) {
+                Alert.alert(
+                  'Success',
+                  'Your order has been placed successfully!',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => {
+                        clearCart();
+                      }
                     }
-                  }
-                ]
-              );
+                  ]
+                );
+              }
+              else {
+                Alert.alert('Error', 'Failed to place order');
+              }
             } catch (error) {
               console.error('Error placing order:', error);
               Alert.alert('Error', 'Failed to place order. Please try again.');
@@ -98,7 +101,7 @@ export default function CartTab() {
       />
       <View className="flex-1 bg-background" style={{ marginTop: 100 }}>
         <View style={styles.container}>
-          {tempCart.length === 0 ? (
+          {cart.length === 0 ? (
             <View style={styles.emptyCart}>
               <Text className="text-muted-foreground text-lg">Your cart is empty</Text>
             </View>
@@ -109,7 +112,10 @@ export default function CartTab() {
                 keyExtractor={(item) => item.seqNo.toString()}
                 contentContainerStyle={styles.cartList}
                 renderItem={({ item }) => (
-                  <View className="bg-card rounded-xl p-4 mb-3 border border-border mx-4">
+                  <Pressable
+                    onPress={() => setSelectedCartItem(item)}
+                    className="bg-card rounded-xl p-4 mb-3 border border-border mx-4"
+                  >
                     <View style={styles.cartItemHeader}>
                       <Text className="text-foreground font-bold text-base">
                         {item.productName}
@@ -137,9 +143,59 @@ export default function CartTab() {
                         Remove
                       </Text>
                     </Pressable>
-                  </View>
+                  </Pressable>
                 )}
               />
+
+              {/* Selected Cart Item Details Modal */}
+              {selectedCartItem && (
+                <View style={styles.overlay}>
+                  <View className="w-11/12 bg-card rounded-xl p-5 border border-border shadow-lg">
+                    <Text className="text-foreground text-xl font-bold mb-3 text-center">Product Details</Text>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Product:</Text>
+                      <Text className="text-foreground">{selectedCartItem.productName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Category:</Text>
+                      <Text className="text-foreground">{selectedCartItem.CategoryName}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Gross:</Text>
+                      <Text className="text-foreground">{selectedCartItem.GrossQty} Kg</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Bale:</Text>
+                      <Text className="text-foreground">{selectedCartItem.BaleQty} Kg</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Wastage:</Text>
+                      <Text className="text-foreground">{selectedCartItem.WastageQty} Kg</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Net Kg:</Text>
+                      <Text className="text-foreground">{selectedCartItem.NetQty.toFixed(2)} Kg</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Price:</Text>
+                      <Text className="text-foreground">Rs.{selectedCartItem.UnitPrice.toFixed(2)}</Text>
+                    </View>
+                    <View style={styles.detailRow}>
+                      <Text className="text-muted-foreground font-semibold">Total Value:</Text>
+                      <Text className="text-foreground font-bold">
+                        Rs.{selectedCartItem.NetValue.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <Pressable
+                      className="mt-4 bg-primary p-2.5 rounded-lg items-center"
+                      onPress={() => setSelectedCartItem(null)}
+                    >
+                      <Text className="text-primary-foreground font-semibold">Close</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              )}
 
               {/* Bottom Section with Total and Place Order Button */}
               <View className="bg-card border-t border-border p-4">
@@ -163,9 +219,7 @@ export default function CartTab() {
                 <Pressable
                   onPress={handlePlaceOrder}
                   disabled={isPlacingOrder}
-                  className={`rounded-lg py-3 mt-4 ${
-                    isPlacingOrder ? 'bg-primary/50' : 'bg-primary'
-                  }`}
+                  className={`rounded-lg py-3 mt-4 ${isPlacingOrder ? 'bg-primary/50' : 'bg-primary'}`}
                   style={styles.placeOrderButton}
                 >
                   <Text className="text-primary-foreground font-bold text-center text-base">
@@ -173,7 +227,7 @@ export default function CartTab() {
                   </Text>
                 </Pressable>
 
-                {/* Clear Cart Button (Optional) */}
+                {/* Clear Cart Button */}
                 <Pressable
                   onPress={() => {
                     Alert.alert(
@@ -215,7 +269,7 @@ const styles = StyleSheet.create({
   },
   cartList: {
     paddingVertical: 16,
-    paddingBottom: 200, // Add padding to prevent overlap with bottom section
+    paddingBottom: 200,
   },
   cartItemHeader: {
     flexDirection: 'row',
@@ -233,5 +287,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
 });
